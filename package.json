@@ -9,7 +9,8 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
-    "docker:start": "prisma migrate deploy && node prisma/seed.js && next start -p 3000"
+    "docker:start": "prisma migrate deploy && node prisma/seed.js && next start -p 3000",
+    "cli": "node scripts/cli.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
