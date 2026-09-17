@@ -1,3 +1,11 @@
+try {
+  if (typeof process.loadEnvFile === "function") {
+    process.loadEnvFile();
+  }
+} catch {
+  // Ignorar si no existe el archivo .env
+}
+
 const { PrismaClient } = require("@prisma/client");
 const readline = require("readline");
 
@@ -24,6 +32,14 @@ async function deleteStudentByDni(dniInput) {
       );
       return;
     }
+
+    await prisma.auditLog.create({
+      data: {
+        action: "USER_DELETED",
+        targetId: user.id,
+        details: `Alumno ${user.apellido}, ${user.nombre} (DNI: ${dni}) eliminado via CLI`,
+      },
+    });
 
     await prisma.user.delete({
       where: { id: user.id },
