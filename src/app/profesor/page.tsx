@@ -8,6 +8,7 @@ import CancelledClasses from "@/components/CancelledClasses";
 import ClassRoster from "@/components/ClassRoster";
 import ExportHoursButton from "@/components/ExportHoursButton";
 import RefreshIndicator from "@/components/RefreshIndicator";
+import ClassCodeManager from "@/components/ClassCodeManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
 
 type Tab = "alumnos" | "porClase" | "clases";
@@ -59,20 +60,26 @@ export default function ProfesorPage() {
         </div>
 
         {tab === "alumnos" && (
-          <section className="card">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-primary">Alumnos - Prácticas Profesionalizantes</h2>
-              <div className="flex flex-wrap items-center gap-3">
-                <RefreshIndicator lastUpdate={lastUpdate} refreshing={refreshing} onRefresh={refreshNow} />
-                <ExportHoursButton label="Exportar horas de todos (CSV)" scope="all" />
+          <>
+            <section className="card">
+              <h2 className="text-lg font-bold text-primary mb-2">Código de Aula</h2>
+              <ClassCodeManager />
+            </section>
+            <section className="card">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-primary">Alumnos - Prácticas Profesionalizantes</h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <RefreshIndicator lastUpdate={lastUpdate} refreshing={refreshing} onRefresh={refreshNow} />
+                  <ExportHoursButton label="Exportar horas de todos (CSV)" scope="all" />
+                </div>
               </div>
-            </div>
-            {loading ? (
-              <p className="text-slate-500">Cargando...</p>
-            ) : (
-              <StudentsTable students={students} detailBasePath="/profesor/alumnos" />
-            )}
-          </section>
+              {loading ? (
+                <p className="text-slate-500">Cargando...</p>
+              ) : (
+                <StudentsTable students={students} detailBasePath="/profesor/alumnos" />
+              )}
+            </section>
+          </>
         )}
 
         {tab === "porClase" && (

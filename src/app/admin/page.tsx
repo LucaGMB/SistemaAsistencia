@@ -9,6 +9,7 @@ import LogsTable from "@/components/LogsTable";
 import CancelledClasses from "@/components/CancelledClasses";
 import ClassRoster from "@/components/ClassRoster";
 import ExportHoursButton from "@/components/ExportHoursButton";
+import ClassCodeManager from "@/components/ClassCodeManager";
 
 type Tab = "alumnos" | "porClase" | "clases" | "nuevo" | "logs";
 
@@ -56,17 +57,23 @@ export default function AdminPage() {
         </div>
 
         {tab === "alumnos" && (
-          <section className="card">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-primary">Alumnos</h2>
-              <ExportHoursButton label="Exportar horas de todos (CSV)" scope="all" />
-            </div>
-            {loading ? (
-              <p className="text-slate-500">Cargando...</p>
-            ) : (
-              <StudentsTable students={students} detailBasePath="/admin/alumnos" />
-            )}
-          </section>
+          <>
+            <section className="card">
+              <h2 className="text-lg font-bold text-primary mb-2">Código de Aula</h2>
+              <ClassCodeManager />
+            </section>
+            <section className="card">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-primary">Alumnos</h2>
+                <ExportHoursButton label="Exportar horas de todos (CSV)" scope="all" />
+              </div>
+              {loading ? (
+                <p className="text-slate-500">Cargando...</p>
+              ) : (
+                <StudentsTable students={students} detailBasePath="/admin/alumnos" />
+              )}
+            </section>
+          </>
         )}
 
         {tab === "porClase" && (

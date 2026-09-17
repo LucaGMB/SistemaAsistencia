@@ -6,8 +6,9 @@ import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
 import { logAudit } from "@/lib/audit";
 
 // El alumno registra su propia asistencia del dia. Solo funciona si la
-// ventana de la clase de hoy esta abierta (ya comenzo y no termino).
-export async function POST() {
+// ventana de la clase de hoy esta abierta (ya comenzo y no termino) y
+// si se provee el codigo correcto de 4 digitos generado por el profesor.
+export async function POST(req: Request) {
   const { session, error } = await requireSession(["ALUMNO"]);
   if (error) return error;
 
@@ -15,6 +16,34 @@ export async function POST() {
   if (status.state !== "OPEN") {
     return NextResponse.json(
       { error: "El registro de asistencia no esta disponible en este momento." },
+      { status: 400 }
+    );
+  }
+
+  const body = await req.json().catch(() => null);
+  const code = String(body?.code ?? "").trim();
+
+  if (!code) {
+    return NextResponse.json(
+      { error: "Debes ingresar el código de 4 dígitos provisto por el profesor." },
+      { status: 400 }
+    );
+  }
+
+  const classCodeRecord = await prisma.classCode.findUnique({
+    where: { date: status.date },
+  });
+
+  if (!classCodeRecord) {
+    return NextResponse.json(
+      { error: "El profesor aún no ha generado el código de asistencia para la clase de hoy." },
+      { status: 400 }
+    );
+  }
+
+  if (classCodeRecord.code !== code) {
+    return NextResponse.json(
+      { error: "El código de 4 dígitos ingresado es incorrecto." },
       { status: 400 }
     );
   }

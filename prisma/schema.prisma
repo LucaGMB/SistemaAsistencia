@@ -31,6 +31,23 @@ model User {
   logsAsActor         AuditLog[] @relation("ActorLogs")
   logsAsTarget        AuditLog[] @relation("TargetLogs")
   cancelledClasses    CancelledClass[]
+  classCodes          ClassCode[]
+}
+
+// Código de 4 dígitos generado por el profesor para habilitar el presente en el aula
+model ClassCode {
+  id          String   @id @default(cuid())
+  // Fecha de la clase en formato YYYY-MM-DD
+  date        String   @unique
+  code        String   // Código de 4 dígitos (ej. "4829")
+
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
 }
 
 // Clases anuladas (feriados, paros, suspensiones). Las asistencias que caigan
