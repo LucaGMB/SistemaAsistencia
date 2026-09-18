@@ -6,11 +6,17 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import ExportHoursButton from "@/components/ExportHoursButton";
 import RefreshIndicator from "@/components/RefreshIndicator";
-import HourBreakdownCard from "@/components/HourBreakdownCard";
+import HoursDashboardCharts from "@/components/HoursDashboardCharts";
 import PreviousTeacherHoursCard from "@/components/PreviousTeacherHoursCard";
 import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
 import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
+import {
+  DashboardIcon,
+  BuildingOfficeIcon,
+  CalendarIcon,
+  AcademicCapIcon,
+} from "@/components/Icons";
 import type { HourBreakdown } from "@/lib/hours";
 
 type Attendance = {
@@ -48,7 +54,7 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
   const [internships, setInternships] = useState<InternshipItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentOpenClassDate, setCurrentOpenClassDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"pasantias" | "cursos" | "asistencias">("pasantias");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "pasantias" | "cursos" | "asistencias">("dashboard");
   const [classDates, setClassDates] = useState<{ date: string; dayOfWeek: string }[]>([]);
 
   useEffect(() => {
@@ -159,21 +165,21 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
               </div>
             </section>
 
-            {/* Desglose por concepto */}
-            <HourBreakdownCard breakdown={breakdown} creditedCount={creditedCount} />
-
-            {/* Horas del profesor anterior (gestión docente) */}
-            <PreviousTeacherHoursCard
-              studentId={student.id}
-              previousHours={student.previousTeacherHours ?? 0}
-              isLocked={student.previousTeacherHoursLocked ?? false}
-              canEditStaff={true}
-              isStudent={false}
-              onChanged={load}
-            />
-
             {/* Navegación Modular por Módulos */}
             <div className="flex border-b border-slate-200 bg-white rounded-xl p-1.5 shadow-sm overflow-x-auto gap-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("dashboard")}
+                className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  activeTab === "dashboard"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <DashboardIcon className="w-4 h-4 shrink-0" />
+                <span>Resumen General</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setActiveTab("pasantias")}
@@ -183,32 +189,14 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>🏢 Pasantías</span>
+                <BuildingOfficeIcon className="w-4 h-4 shrink-0" />
+                <span>Pasantías</span>
                 <span
                   className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                     activeTab === "pasantias" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
                   }`}
                 >
                   {breakdown.internshipHours}hs
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab("cursos")}
-                className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
-                  activeTab === "cursos"
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                <span>🎓 Cursos y Talleres</span>
-                <span
-                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                    activeTab === "cursos" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
-                  }`}
-                >
-                  {breakdown.coursesHours}hs
                 </span>
               </button>
 
@@ -221,7 +209,8 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                     : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
-                <span>📅 Clases Presenciales</span>
+                <CalendarIcon className="w-4 h-4 shrink-0" />
+                <span>Clases</span>
                 <span
                   className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                     activeTab === "asistencias" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
@@ -230,7 +219,43 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                   {creditedCount} presentes
                 </span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("cursos")}
+                className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                  activeTab === "cursos"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                <AcademicCapIcon className="w-4 h-4 shrink-0" />
+                <span>Cursos</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                    activeTab === "cursos" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                  }`}
+                >
+                  {breakdown.coursesHours}hs
+                </span>
+              </button>
             </div>
+
+            {/* PESTAÑA 1: DASHBOARD / RESUMEN GENERAL */}
+            {activeTab === "dashboard" && (
+              <div className="space-y-6">
+                <HoursDashboardCharts breakdown={breakdown} creditedCount={creditedCount} />
+
+                <PreviousTeacherHoursCard
+                  studentId={student.id}
+                  previousHours={student.previousTeacherHours ?? 0}
+                  isLocked={student.previousTeacherHoursLocked ?? false}
+                  canEditStaff={true}
+                  isStudent={false}
+                  onChanged={load}
+                />
+              </div>
+            )}
 
             {/* Contenido según Módulo Activo */}
             {activeTab === "pasantias" && (

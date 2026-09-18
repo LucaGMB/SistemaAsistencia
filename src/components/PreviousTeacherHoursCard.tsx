@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { ClockIcon, LockClosedIcon, ExclamationTriangleIcon } from "@/components/Icons";
 
 type Props = {
   studentId: string;
   previousHours: number;
   isLocked: boolean;
   canEditStaff: boolean;
-  isStudent: boolean;
+  isStudent?: boolean;
   onChanged: () => void;
 };
 
@@ -16,11 +17,11 @@ export default function PreviousTeacherHoursCard({
   previousHours,
   isLocked,
   canEditStaff,
-  isStudent,
+  isStudent = false,
   onChanged,
 }: Props) {
   const [editing, setEditing] = useState(false);
-  const [hoursInput, setHoursInput] = useState(previousHours > 0 ? String(previousHours) : "");
+  const [hoursInput, setHoursInput] = useState(String(previousHours));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,11 +65,12 @@ export default function PreviousTeacherHoursCard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="text-xl" aria-hidden="true">⏱️</span>
+            <ClockIcon className="w-5 h-5 text-amber-600" />
             <h3 className="text-base font-bold text-primary">Horas con Profesor Anterior (antes del 1/9)</h3>
             {isLocked ? (
-              <span className="badge bg-slate-100 text-slate-700 border border-slate-200">
-                🔒 Bloqueado
+              <span className="badge inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200">
+                <LockClosedIcon className="w-3 h-3 text-slate-500" />
+                Bloqueado
               </span>
             ) : (
               <span className="badge bg-amber-50 text-amber-700 border border-amber-200">
@@ -116,7 +118,11 @@ export default function PreviousTeacherHoursCard({
         <form onSubmit={handleSave} className="mt-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 space-y-3">
           {isStudent && (
             <div className="rounded-lg bg-amber-100/70 p-3 text-xs text-amber-900 border border-amber-300/50">
-              <strong className="font-bold">⚠️ Atención:</strong> Esta carga es por <strong>única vez</strong>. Una vez
+              <span className="inline-flex items-center gap-1 font-bold mr-1">
+                <ExclamationTriangleIcon className="w-4 h-4 text-amber-700" />
+                Atención:
+              </span>
+              Esta carga es por <strong>única vez</strong>. Una vez
               guardado el valor, quedará bloqueado y cualquier corrección posterior deberá ser efectuada por tu profesor o
               administrador.
             </div>

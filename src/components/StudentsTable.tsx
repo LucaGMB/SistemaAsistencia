@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import { XMarkIcon } from "@/components/Icons";
 
 export type StudentRow = {
   id: string;
@@ -45,10 +46,10 @@ export default function StudentsTable({
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-sm font-bold"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
               aria-label="Limpiar búsqueda"
             >
-              ✕
+              <XMarkIcon className="w-4 h-4" />
             </button>
           )}
         </div>

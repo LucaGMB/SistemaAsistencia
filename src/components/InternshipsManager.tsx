@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { ArrowPathIcon, XMarkIcon } from "@/components/Icons";
 import {
   INTERNSHIP_EXCEPTION_REASONS,
   WEEKDAY_LABELS,
@@ -434,10 +435,11 @@ export default function InternshipsManager({
             <h4 className="text-sm font-bold text-primary">Registrar nueva pasantía</h4>
             <button
               type="button"
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
               onClick={() => setShowNewForm(false)}
             >
-              ✕ Cancelar
+              <XMarkIcon className="w-3.5 h-3.5" />
+              <span>Cancelar</span>
             </button>
           </div>
 
@@ -595,10 +597,11 @@ export default function InternshipsManager({
             <h4 className="text-sm font-bold text-primary">Editar pasantía en {editingInternship.company}</h4>
             <button
               type="button"
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
               onClick={() => setEditingInternship(null)}
             >
-              ✕ Cancelar
+              <XMarkIcon className="w-3.5 h-3.5" />
+              <span>Cancelar</span>
             </button>
           </div>
 
@@ -874,10 +877,11 @@ export default function InternshipsManager({
                         <button
                           type="button"
                           disabled={syncingHolidayId === intern.id}
-                          className="text-xs text-indigo-700 hover:underline font-semibold"
+                          className="inline-flex items-center gap-1 text-xs text-indigo-700 hover:underline font-semibold"
                           onClick={() => handleSyncHolidays(intern)}
                         >
-                          {syncingHolidayId === intern.id ? "Sincronizando..." : "⚡ Sincronizar feriados"}
+                          <ArrowPathIcon className={`w-3.5 h-3.5 ${syncingHolidayId === intern.id ? "animate-spin" : ""}`} />
+                          <span>{syncingHolidayId === intern.id ? "Sincronizando..." : "Sincronizar feriados"}</span>
                         </button>
                       )}
                       {canEdit && !isAddingException && (

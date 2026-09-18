@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { XMarkIcon } from "@/components/Icons";
 import { HOUR_CONCEPT_CATEGORIES, HourConceptCategory } from "@/lib/hours";
 
 export type HourConceptItem = {
@@ -159,10 +160,11 @@ export default function HourConceptsManager({
             <h4 className="text-sm font-bold text-primary">Cargar curso o capacitación</h4>
             <button
               type="button"
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
               onClick={() => setShowForm(false)}
             >
-              ✕ Cancelar
+              <XMarkIcon className="w-3.5 h-3.5" />
+              <span>Cancelar</span>
             </button>
           </div>
 

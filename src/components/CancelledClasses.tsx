@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ArrowPathIcon } from "@/components/Icons";
 
 type CancelledClass = {
   id: string;
@@ -113,9 +114,10 @@ export default function CancelledClasses({ onChange }: { onChange?: () => void }
           type="button"
           onClick={syncHolidays}
           disabled={syncingHolidays}
-          className="btn-outline text-xs !py-2 !px-3 font-semibold text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+          className="btn-outline text-xs !py-2 !px-3 font-semibold text-indigo-700 border-indigo-200 hover:bg-indigo-50 inline-flex items-center gap-1.5"
         >
-          {syncingHolidays ? "Sincronizando..." : "⚡ Sincronizar feriados nacionales"}
+          <ArrowPathIcon className={`w-3.5 h-3.5 ${syncingHolidays ? "animate-spin" : ""}`} />
+          <span>{syncingHolidays ? "Sincronizando..." : "Sincronizar feriados y asuetos"}</span>
         </button>
       </div>
 
