@@ -5,12 +5,18 @@ import { useSession } from "next-auth/react";
 import TopBar from "@/components/TopBar";
 import ExportHoursButton from "@/components/ExportHoursButton";
 import WeekCalendar from "@/components/WeekCalendar";
-import Celebration from "@/components/Celebration";
-import HourBreakdownCard from "@/components/HourBreakdownCard";
+import HoursDashboardCharts from "@/components/HoursDashboardCharts";
+import PreviousTeacherHoursCard from "@/components/PreviousTeacherHoursCard";
 import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
 import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
-import { crossedMilestone, hoursToNextMilestone, milestonesReached } from "@/lib/milestones";
+import {
+  DashboardIcon,
+  BuildingOfficeIcon,
+  CalendarIcon,
+  AcademicCapIcon,
+  CheckIcon,
+} from "@/components/Icons";
 import type { AttendanceStatus } from "@/lib/schedule";
 import type { HourBreakdown } from "@/lib/hours";
 
@@ -39,11 +45,12 @@ export default function AlumnoPage() {
   const [breakdown, setBreakdown] = useState<HourBreakdown>(DEFAULT_BREAKDOWN);
   const [hourConcepts, setHourConcepts] = useState<HourConceptItem[]>([]);
   const [internships, setInternships] = useState<InternshipItem[]>([]);
-  const [totalHours, setTotalHours] = useState(0);
+  const [previousTeacherHours, setPreviousTeacherHours] = useState(0);
+  const [previousTeacherHoursLocked, setPreviousTeacherHoursLocked] = useState(false);
+  const [activeTab, setActiveTab] = useState<"dashboard" | "pasantias" | "clases" | "cursos">("dashboard");
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [celebrating, setCelebrating] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const [statusRes, attRes] = await Promise.all([
@@ -53,7 +60,8 @@ export default function AlumnoPage() {
     setStatus(statusRes.status);
     setAlreadyRegistered(statusRes.alreadyRegistered);
     setAttendances(attRes.attendances ?? []);
-    setTotalHours(attRes.totalHours ?? 0);
+    setPreviousTeacherHours(attRes.previousTeacherHours ?? 0);
+    setPreviousTeacherHoursLocked(attRes.previousTeacherHoursLocked ?? false);
     setBreakdown(
       attRes.breakdown ?? {
         classHours: 0,
@@ -74,13 +82,11 @@ export default function AlumnoPage() {
   }, [load]);
 
   // Si le corrigen una asistencia, el alumno ve sus horas al día sin recargar.
-  // No dispara festejos: esos son solo para el momento en que él registra.
   useAutoRefresh(load);
 
   async function handleRegister(code: string) {
     setRegistering(true);
     setMessage(null);
-    const previousHours = totalHours;
     const res = await fetch("/api/attendance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,13 +98,8 @@ export default function AlumnoPage() {
       setMessage(data.error ?? "No se pudo registrar la asistencia.");
       return;
     }
-    setMessage("¡Asistencia registrada correctamente!");
-    const newHours = await load();
-    // El festejo se dispara solo en el momento de cruzar el hito, no cada
-    // vez que se abre la página.
-    if (crossedMilestone(previousHours, newHours)) {
-      setCelebrating(newHours);
-    }
+    setMessage("Asistencia registrada correctamente.");
+    await load();
   }
 
   if (!session) return null;
@@ -109,110 +110,197 @@ export default function AlumnoPage() {
     <div className="min-h-screen bg-slate-50">
       <TopBar nombre={session.user.nombre} apellido={session.user.apellido} roleLabel="Alumno" />
 
-      {celebrating !== null && (
-        <Celebration
-          hours={celebrating}
-          milestone={milestonesReached(celebrating)}
-          onDone={() => setCelebrating(null)}
-        />
-      )}
-
       <main className="mx-auto max-w-3xl space-y-6 px-4 py-8">
-        <section className="card">
-          <h2 className="mb-4 text-lg font-bold text-primary">Asistencia de hoy</h2>
-          {loading || !status ? (
-            <p className="text-slate-500">Cargando...</p>
-          ) : (
-            <AttendanceCard
-              status={status}
-              alreadyRegistered={alreadyRegistered}
-              onRegister={handleRegister}
-              registering={registering}
+        {/* Navegación Modular Principal por Pestañas */}
+        <div className="flex border-b border-slate-200 bg-white rounded-xl p-1.5 shadow-sm overflow-x-auto gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "dashboard"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <DashboardIcon className="w-4 h-4 shrink-0" />
+            <span>Resumen General</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("pasantias")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "pasantias"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <BuildingOfficeIcon className="w-4 h-4 shrink-0" />
+            <span>Pasantías</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "pasantias" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {breakdown.internshipHours}hs
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("clases")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "clases"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <CalendarIcon className="w-4 h-4 shrink-0" />
+            <span>Clases</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "clases" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {creditedCount} presentes
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("cursos")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "cursos"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <AcademicCapIcon className="w-4 h-4 shrink-0" />
+            <span>Cursos</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "cursos" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {breakdown.coursesHours}hs
+            </span>
+          </button>
+        </div>
+
+        {/* PESTAÑA 1: DASHBOARD / RESUMEN GENERAL */}
+        {activeTab === "dashboard" && (
+          <div className="space-y-6">
+            {/* Asistencia de hoy */}
+            <section className="card">
+              <h2 className="mb-4 text-lg font-bold text-primary">Asistencia de hoy</h2>
+              {loading || !status ? (
+                <p className="text-slate-500">Cargando...</p>
+              ) : (
+                <AttendanceCard
+                  status={status}
+                  alreadyRegistered={alreadyRegistered}
+                  onRegister={handleRegister}
+                  registering={registering}
+                />
+              )}
+              {message && <p className="mt-3 text-sm font-medium text-primary">{message}</p>}
+            </section>
+
+            {/* Gráfico visual proporcional de horas y métricas */}
+            <HoursDashboardCharts breakdown={breakdown} creditedCount={creditedCount} />
+
+            {/* Horas del profesor anterior (Carga única bloqueable) */}
+            <PreviousTeacherHoursCard
+              studentId={session.user.id}
+              previousHours={previousTeacherHours}
+              isLocked={previousTeacherHoursLocked}
+              canEditStaff={false}
+              isStudent={true}
+              onChanged={load}
             />
-          )}
-          {message && <p className="mt-3 text-sm font-medium text-primary">{message}</p>}
-        </section>
 
-        {/* Desglose de Horas */}
-        <HourBreakdownCard breakdown={breakdown} creditedCount={creditedCount} />
-
-        <section className="card">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              {/* Solo se habla de festejos: no se muestra la meta total. */}
-              <p className="text-sm font-medium text-primary">
-                {milestonesReached(totalHours) > 0 && (
-                  <span className="mr-2" aria-hidden="true">
-                    {"🎉".repeat(Math.min(milestonesReached(totalHours), 8))}
-                  </span>
-                )}
-                {milestonesReached(totalHours) === 0
-                  ? `Te faltan ${hoursToNextMilestone(totalHours)}hs para tu primer festejo`
-                  : `${milestonesReached(totalHours)} ${
-                      milestonesReached(totalHours) === 1 ? "festejo" : "festejos"
-                    } · próximo en ${hoursToNextMilestone(totalHours)}hs`}
-              </p>
-            </div>
-            <ExportHoursButton label="Exportar mis horas (CSV)" />
+            {/* Exportación CSV */}
+            <section className="card flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-primary text-sm">Comprobante de Horas</h3>
+                <p className="text-xs text-slate-500">
+                  Descargá un archivo CSV con el detalle completo de tus horas acreditadas.
+                </p>
+              </div>
+              <ExportHoursButton label="Exportar mis horas (CSV)" />
+            </section>
           </div>
-        </section>
+        )}
 
-        {/* Conceptos Individuales (horas previas, cursos) */}
-        <HourConceptsManager
-          studentId={session.user.id}
-          concepts={hourConcepts}
-          canEdit={false}
-          onChanged={load}
-        />
+        {/* PESTAÑA 2: PASANTÍAS */}
+        {activeTab === "pasantias" && (
+          <InternshipsManager
+            studentId={session.user.id}
+            internships={internships}
+            canEdit={true}
+            currentUserId={session.user.id}
+            currentUserRole={session.user.role}
+            onChanged={load}
+          />
+        )}
 
-        {/* Pasantías externas */}
-        <InternshipsManager
-          studentId={session.user.id}
-          internships={internships}
-          canEdit={false}
-          onChanged={load}
-        />
+        {/* PESTAÑA 3: CLASES PRESENCIALES */}
+        {activeTab === "clases" && (
+          <div className="space-y-6">
+            <section className="card">
+              <h2 className="mb-4 text-lg font-bold text-primary">Mi semana en Prácticas</h2>
+              <WeekCalendar />
+            </section>
 
-        <section className="card">
-          <h2 className="mb-4 text-lg font-bold text-primary">Mi semana en Prácticas</h2>
-          <WeekCalendar />
-        </section>
+            <section className="card">
+              <h2 className="mb-4 text-lg font-bold text-primary">Historial de asistencias regulares</h2>
+              {attendances.length === 0 ? (
+                <p className="text-sm text-slate-500">Todavía no registraste ninguna asistencia.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table-base">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Día</th>
+                        <th>Horas</th>
+                        <th>Origen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendances.map((a) => (
+                        <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
+                          <td>{a.date}</td>
+                          <td>{a.dayOfWeek}</td>
+                          <td>
+                            {a.cancelled ? (
+                              <span className="badge bg-amber-100 text-amber-700">Clase anulada</span>
+                            ) : (
+                              `${a.hours}hs`
+                            )}
+                          </td>
+                          <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
 
-        <section className="card">
-          <h2 className="mb-4 text-lg font-bold text-primary">Historial de asistencias</h2>
-          {attendances.length === 0 ? (
-            <p className="text-sm text-slate-500">Todavía no registraste ninguna asistencia.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table-base">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Día</th>
-                    <th>Horas</th>
-                    <th>Origen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendances.map((a) => (
-                    <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
-                      <td>{a.date}</td>
-                      <td>{a.dayOfWeek}</td>
-                      <td>
-                        {a.cancelled ? (
-                          <span className="badge bg-amber-100 text-amber-700">Clase anulada</span>
-                        ) : (
-                          `${a.hours}hs`
-                        )}
-                      </td>
-                      <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        {/* PESTAÑA 4: CURSOS Y TALLERES */}
+        {activeTab === "cursos" && (
+          <HourConceptsManager
+            studentId={session.user.id}
+            concepts={hourConcepts}
+            canEdit={true}
+            currentUserId={session.user.id}
+            currentUserRole={session.user.role}
+            onChanged={load}
+          />
+        )}
       </main>
     </div>
   );
@@ -264,8 +352,9 @@ function AttendanceCard({
 
   if (alreadyRegistered) {
     return (
-      <p className="font-medium text-green-700">
-        ✔ Ya registraste tu asistencia de hoy ({status.dayOfWeek}, +{status.hours}hs).
+      <p className="font-medium text-green-700 inline-flex items-center gap-1.5">
+        <CheckIcon className="w-4 h-4 text-green-700 shrink-0" />
+        <span>Ya registraste tu asistencia de hoy ({status.dayOfWeek}, +{status.hours}hs).</span>
       </p>
     );
   }

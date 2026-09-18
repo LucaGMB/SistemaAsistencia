@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { XMarkIcon } from "@/components/Icons";
 
 export default function ChangePasswordModal({
   onClose,
@@ -58,8 +59,8 @@ export default function ChangePasswordModal({
             {required ? "Definí tu contraseña" : "Cambiar contraseña"}
           </h2>
           {!required && (
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar">
-              ✕
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1" aria-label="Cerrar">
+              <XMarkIcon className="w-5 h-5" />
             </button>
           )}
         </div>

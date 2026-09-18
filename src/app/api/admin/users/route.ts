@@ -24,6 +24,8 @@ export async function GET() {
       apellido: true,
       role: true,
       active: true,
+      previousTeacherHours: true,
+      previousTeacherHoursLocked: true,
       createdAt: true,
       attendances: { select: { date: true, hours: true } },
       hourConcepts: { select: { category: true, hours: true } },
@@ -44,6 +46,7 @@ export async function GET() {
     const breakdown = calculateStudentBreakdown({
       attendances: u.attendances,
       cancelledDates,
+      previousTeacherHours: u.previousTeacherHours,
       concepts: u.hourConcepts,
       internships: u.internships,
     });

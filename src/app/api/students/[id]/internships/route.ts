@@ -17,6 +17,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     where: { studentId: params.id },
     include: {
       exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
     },
     orderBy: { startDate: "desc" },
   });
@@ -30,8 +33,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const student = await prisma.user.findUnique({
     where: { id: params.id },
@@ -46,7 +54,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const company = String(body?.company ?? "").trim();
   const roleOrTask = body?.roleOrTask ? String(body.roleOrTask).trim() : null;
   const startDate = String(body?.startDate ?? "").trim();
-  const endDate = String(body?.endDate ?? "").trim();
+  const rawEndDate = body?.endDate ? String(body.endDate).trim() : "";
+  const endDate = rawEndDate.length > 0 ? rawEndDate : null;
   const note = body?.note ? String(body.note).trim() : null;
   const weeklyScheduleInput = body?.weeklySchedule;
 
@@ -54,18 +63,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "La empresa u organismo es obligatorio." }, { status: 400 });
   }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
     return NextResponse.json(
-      { error: "Las fechas de inicio y fin deben tener formato YYYY-MM-DD." },
+      { error: "La fecha de inicio debe tener formato YYYY-MM-DD." },
       { status: 400 }
     );
   }
 
-  if (startDate > endDate) {
-    return NextResponse.json(
-      { error: "La fecha de inicio no puede ser posterior a la fecha de fin." },
-      { status: 400 }
-    );
+  if (endDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return NextResponse.json(
+        { error: "La fecha de fin debe tener formato YYYY-MM-DD." },
+        { status: 400 }
+      );
+    }
+    if (startDate > endDate) {
+      return NextResponse.json(
+        { error: "La fecha de inicio no puede ser posterior a la fecha de fin." },
+        { status: 400 }
+      );
+    }
   }
 
   let scheduleObj: Record<string, number> = {};
@@ -84,15 +101,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     );
   }
 
-  // Validar que haya al menos un día con horas > 0
+  // Validar que solo haya días de semana (1 a 5: Lunes a Viernes). No se permite sábado (6) ni domingo (0).
+  const hasWeekend = Object.keys(scheduleObj).some((day) => {
+    const dNum = Number(day);
+    return (dNum === 0 || dNum === 6) && Number(scheduleObj[day]) > 0;
+  });
+
+  if (hasWeekend) {
+    return NextResponse.json(
+      { error: "Solo se permite cargar horas en días de semana (lunes a viernes). Los sábados y domingos no están permitidos." },
+      { status: 400 }
+    );
+  }
+
+  // Validar que haya al menos un día de semana con horas > 0
   const validDays = Object.entries(scheduleObj).filter(([day, h]) => {
     const dNum = Number(day);
-    return Number.isInteger(dNum) && dNum >= 0 && dNum <= 6 && Number(h) > 0;
+    return Number.isInteger(dNum) && dNum >= 1 && dNum <= 5 && Number(h) > 0;
   });
 
   if (validDays.length === 0) {
     return NextResponse.json(
-      { error: "Debes asignar horas a por lo menos un día de la semana." },
+      { error: "Debes asignar horas a por lo menos un día de la semana (lunes a viernes)." },
       { status: 400 }
     );
   }
@@ -113,7 +143,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       note,
       createdById: session!.user.id,
     },
-    include: { exceptions: true },
+    include: {
+      exceptions: true,
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
   });
 
   await logAudit({

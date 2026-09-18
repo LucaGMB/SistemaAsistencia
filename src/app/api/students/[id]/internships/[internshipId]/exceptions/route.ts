@@ -8,8 +8,13 @@ export async function POST(
   req: Request,
   { params }: { params: { id: string; internshipId: string } }
 ) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const internship = await prisma.internship.findUnique({
     where: { id: params.internshipId },
@@ -39,9 +44,11 @@ export async function POST(
     );
   }
 
-  if (date < internship.startDate || date > internship.endDate) {
+  if (date < internship.startDate || (internship.endDate && date > internship.endDate)) {
     return NextResponse.json(
-      { error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate}).` },
+      {
+        error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate ?? "actualidad"}).`,
+      },
       { status: 400 }
     );
   }
@@ -81,7 +88,12 @@ export async function POST(
 
   const updatedInternship = await prisma.internship.findUnique({
     where: { id: params.internshipId },
-    include: { exceptions: { orderBy: { date: "desc" } } },
+    include: {
+      exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
   });
 
   return NextResponse.json(
@@ -102,8 +114,13 @@ export async function DELETE(
   req: Request,
   { params }: { params: { id: string; internshipId: string } }
 ) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const exceptionId = searchParams.get("exceptionId");
@@ -141,7 +158,12 @@ export async function DELETE(
 
   const updatedInternship = await prisma.internship.findUnique({
     where: { id: params.internshipId },
-    include: { exceptions: { orderBy: { date: "desc" } } },
+    include: {
+      exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
   });
 
   return NextResponse.json({

@@ -30,9 +30,13 @@ const ACTION_LABELS: Record<string, string> = {
   HOUR_CONCEPT_CREATED: "Concepto de horas creado",
   HOUR_CONCEPT_DELETED: "Concepto de horas eliminado",
   INTERNSHIP_CREATED: "Pasantía registrada",
+  INTERNSHIP_UPDATED: "Pasantía actualizada",
   INTERNSHIP_DELETED: "Pasantía eliminada",
   INTERNSHIP_EXCEPTION_CREATED: "Inasistencia de pasantía registrada",
   INTERNSHIP_EXCEPTION_DELETED: "Inasistencia de pasantía eliminada",
+  HOLIDAYS_SYNCED: "Feriados nacionales sincronizados",
+  PREVIOUS_HOURS_TEACHER_UPDATE: "Horas prof. anterior modificadas (docente)",
+  PREVIOUS_HOURS_STUDENT_SET: "Horas prof. anterior cargadas (alumno)",
 };
 
 export default function LogsTable() {

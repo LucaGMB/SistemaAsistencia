@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { XMarkIcon } from "@/components/Icons";
 import { HOUR_CONCEPT_CATEGORIES, HourConceptCategory } from "@/lib/hours";
 
 export type HourConceptItem = {
@@ -11,12 +12,21 @@ export type HourConceptItem = {
   hours: number;
   date: string | null;
   note: string | null;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    role: string;
+  } | null;
 };
 
 type Props = {
   studentId: string;
   concepts: HourConceptItem[];
   canEdit: boolean;
+  currentUserId?: string;
+  currentUserRole?: string;
   onChanged: () => void;
 };
 
@@ -34,9 +44,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTRO: "Otro",
 };
 
-export default function HourConceptsManager({ studentId, concepts, canEdit, onChanged }: Props) {
+export default function HourConceptsManager({
+  studentId,
+  concepts,
+  canEdit,
+  currentUserId,
+  currentUserRole,
+  onChanged,
+}: Props) {
   const [showForm, setShowForm] = useState(false);
-  const [category, setCategory] = useState<HourConceptCategory>("PREVIA");
+  const [category, setCategory] = useState<HourConceptCategory>("CURSO");
   const [title, setTitle] = useState("");
   const [institution, setInstitution] = useState("");
   const [hours, setHours] = useState("");
@@ -116,9 +133,9 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
     <section className="card space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-lg font-bold text-primary">Conceptos Individuales de Horas</h3>
+          <h3 className="text-lg font-bold text-primary">Cursos y Capacitaciones Externas</h3>
           <p className="text-xs text-slate-500">
-            Horas previas al 1/9, cursos, capacitaciones externas o reconocimientos individuales.
+            Cursos, talleres, certificaciones y capacitaciones extracurriculares individuales.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -131,7 +148,7 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
               className="btn-primary text-xs !py-1.5 !px-3"
               onClick={() => setShowForm(true)}
             >
-              + Nuevo Concepto
+              + Nuevo Curso / Concepto
             </button>
           )}
         </div>
@@ -140,13 +157,14 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
       {canEdit && showForm && (
         <form onSubmit={handleAdd} className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-primary">Cargar concepto de horas</h4>
+            <h4 className="text-sm font-bold text-primary">Cargar curso o capacitación</h4>
             <button
               type="button"
-              className="text-xs text-slate-500 hover:text-slate-800"
+              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800"
               onClick={() => setShowForm(false)}
             >
-              ✕ Cancelar
+              <XMarkIcon className="w-3.5 h-3.5" />
+              <span>Cancelar</span>
             </button>
           </div>
 
@@ -173,7 +191,7 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
               <input
                 type="text"
                 className="input text-sm py-1.5"
-                placeholder="Ej. Horas 1er Cuatrimestre, Curso React..."
+                placeholder="Ej. Curso React, Certificación AWS..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -258,42 +276,64 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
                 <th>Institución</th>
                 <th>Fecha</th>
                 <th>Horas</th>
+                <th>Cargado por</th>
                 <th>Nota</th>
                 {canEdit && <th></th>}
               </tr>
             </thead>
             <tbody>
-              {concepts.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <span
-                      className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                        CATEGORY_COLORS[c.category] || CATEGORY_COLORS.OTRO
-                      }`}
-                    >
-                      {CATEGORY_LABELS[c.category] || c.category}
-                    </span>
-                  </td>
-                  <td className="font-medium text-slate-800">{c.title}</td>
-                  <td className="text-slate-500">{c.institution || "—"}</td>
-                  <td className="text-slate-500">{c.date || "—"}</td>
-                  <td className="font-bold text-accent">+{c.hours}hs</td>
-                  <td className="max-w-[150px] truncate text-slate-400" title={c.note || undefined}>
-                    {c.note || "—"}
-                  </td>
-                  {canEdit && (
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(c)}
-                        className="text-xs text-red-600 hover:underline hover:text-red-800"
+              {concepts.map((c) => {
+                const isStudent = currentUserRole === "ALUMNO";
+                const isCreatedByTeacher = c.createdById && c.createdById !== currentUserId;
+                const canDeleteThis = !isStudent || !isCreatedByTeacher;
+
+                return (
+                  <tr key={c.id}>
+                    <td>
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                          CATEGORY_COLORS[c.category] || CATEGORY_COLORS.OTRO
+                        }`}
                       >
-                        Eliminar
-                      </button>
+                        {CATEGORY_LABELS[c.category] || c.category}
+                      </span>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="font-medium text-slate-800">{c.title}</td>
+                    <td className="text-slate-500">{c.institution || "—"}</td>
+                    <td className="text-slate-500">{c.date || "—"}</td>
+                    <td className="font-bold text-accent">+{c.hours}hs</td>
+                    <td>
+                      {c.createdBy?.role === "ALUMNO" ? (
+                        <span className="badge bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Alumno
+                        </span>
+                      ) : (
+                        <span className="badge bg-slate-100 text-slate-700 border border-slate-200">
+                          Docente
+                        </span>
+                      )}
+                    </td>
+                    <td className="max-w-[150px] truncate text-slate-400" title={c.note || undefined}>
+                      {c.note || "—"}
+                    </td>
+                    {canEdit && (
+                      <td className="text-right">
+                        {canDeleteThis ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(c)}
+                            className="text-xs text-red-600 hover:underline hover:text-red-800"
+                          >
+                            Eliminar
+                          </button>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

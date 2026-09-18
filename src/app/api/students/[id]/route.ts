@@ -26,16 +26,26 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         apellido: true,
         role: true,
         active: true,
+        previousTeacherHours: true,
+        previousTeacherHoursLocked: true,
         attendances: {
           orderBy: { date: "desc" },
           select: { id: true, date: true, dayOfWeek: true, hours: true, source: true, note: true },
         },
         hourConcepts: {
+          include: {
+            createdBy: {
+              select: { id: true, nombre: true, apellido: true, role: true },
+            },
+          },
           orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         },
         internships: {
           include: {
             exceptions: { orderBy: { date: "desc" } },
+            createdBy: {
+              select: { id: true, nombre: true, apellido: true, role: true },
+            },
           },
           orderBy: { startDate: "desc" },
         },
@@ -55,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const breakdown = calculateStudentBreakdown({
     attendances,
     cancelledDates,
+    previousTeacherHours: student.previousTeacherHours,
     concepts: hourConcepts,
     internships,
   });
