@@ -8,7 +8,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string; internshipId: string } }
 ) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
 
   const internship = await prisma.internship.findUnique({
@@ -18,6 +18,19 @@ export async function DELETE(
 
   if (!internship || internship.studentId !== params.id) {
     return NextResponse.json({ error: "Pasantía no encontrada." }, { status: 404 });
+  }
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff) {
+    if (session!.user.id !== params.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+    if (internship.createdById && internship.createdById !== session!.user.id) {
+      return NextResponse.json(
+        { error: "No podés eliminar una pasantía registrada por el docente." },
+        { status: 403 }
+      );
+    }
   }
 
   await prisma.internship.delete({
@@ -38,8 +51,13 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string; internshipId: string } }
 ) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const internship = await prisma.internship.findUnique({
     where: { id: params.internshipId },

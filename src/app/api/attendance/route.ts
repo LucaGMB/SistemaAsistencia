@@ -112,12 +112,20 @@ export async function GET(req: Request) {
     getCancelledDates(),
     prisma.hourConcept.findMany({
       where: { studentId },
+      include: {
+        createdBy: {
+          select: { id: true, nombre: true, apellido: true, role: true },
+        },
+      },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     }),
     prisma.internship.findMany({
       where: { studentId },
       include: {
         exceptions: { orderBy: { date: "desc" } },
+        createdBy: {
+          select: { id: true, nombre: true, apellido: true, role: true },
+        },
       },
       orderBy: { startDate: "desc" },
     }),

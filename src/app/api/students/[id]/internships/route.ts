@@ -17,6 +17,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     where: { studentId: params.id },
     include: {
       exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
     },
     orderBy: { startDate: "desc" },
   });
@@ -30,8 +33,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const student = await prisma.user.findUnique({
     where: { id: params.id },
@@ -113,7 +121,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       note,
       createdById: session!.user.id,
     },
-    include: { exceptions: true },
+    include: {
+      exceptions: true,
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
   });
 
   await logAudit({

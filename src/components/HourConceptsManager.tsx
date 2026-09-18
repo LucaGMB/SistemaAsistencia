@@ -11,12 +11,21 @@ export type HourConceptItem = {
   hours: number;
   date: string | null;
   note: string | null;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    role: string;
+  } | null;
 };
 
 type Props = {
   studentId: string;
   concepts: HourConceptItem[];
   canEdit: boolean;
+  currentUserId?: string;
+  currentUserRole?: string;
   onChanged: () => void;
 };
 
@@ -34,7 +43,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTRO: "Otro",
 };
 
-export default function HourConceptsManager({ studentId, concepts, canEdit, onChanged }: Props) {
+export default function HourConceptsManager({
+  studentId,
+  concepts,
+  canEdit,
+  currentUserId,
+  currentUserRole,
+  onChanged,
+}: Props) {
   const [showForm, setShowForm] = useState(false);
   const [category, setCategory] = useState<HourConceptCategory>("PREVIA");
   const [title, setTitle] = useState("");
@@ -258,42 +274,64 @@ export default function HourConceptsManager({ studentId, concepts, canEdit, onCh
                 <th>Institución</th>
                 <th>Fecha</th>
                 <th>Horas</th>
+                <th>Cargado por</th>
                 <th>Nota</th>
                 {canEdit && <th></th>}
               </tr>
             </thead>
             <tbody>
-              {concepts.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <span
-                      className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border ${
-                        CATEGORY_COLORS[c.category] || CATEGORY_COLORS.OTRO
-                      }`}
-                    >
-                      {CATEGORY_LABELS[c.category] || c.category}
-                    </span>
-                  </td>
-                  <td className="font-medium text-slate-800">{c.title}</td>
-                  <td className="text-slate-500">{c.institution || "—"}</td>
-                  <td className="text-slate-500">{c.date || "—"}</td>
-                  <td className="font-bold text-accent">+{c.hours}hs</td>
-                  <td className="max-w-[150px] truncate text-slate-400" title={c.note || undefined}>
-                    {c.note || "—"}
-                  </td>
-                  {canEdit && (
-                    <td className="text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(c)}
-                        className="text-xs text-red-600 hover:underline hover:text-red-800"
+              {concepts.map((c) => {
+                const isStudent = currentUserRole === "ALUMNO";
+                const isCreatedByTeacher = c.createdById && c.createdById !== currentUserId;
+                const canDeleteThis = !isStudent || !isCreatedByTeacher;
+
+                return (
+                  <tr key={c.id}>
+                    <td>
+                      <span
+                        className={`inline-block rounded px-2 py-0.5 text-[11px] font-semibold border ${
+                          CATEGORY_COLORS[c.category] || CATEGORY_COLORS.OTRO
+                        }`}
                       >
-                        Eliminar
-                      </button>
+                        {CATEGORY_LABELS[c.category] || c.category}
+                      </span>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="font-medium text-slate-800">{c.title}</td>
+                    <td className="text-slate-500">{c.institution || "—"}</td>
+                    <td className="text-slate-500">{c.date || "—"}</td>
+                    <td className="font-bold text-accent">+{c.hours}hs</td>
+                    <td>
+                      {c.createdBy?.role === "ALUMNO" ? (
+                        <span className="badge bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Alumno
+                        </span>
+                      ) : (
+                        <span className="badge bg-slate-100 text-slate-700 border border-slate-200">
+                          Docente
+                        </span>
+                      )}
+                    </td>
+                    <td className="max-w-[150px] truncate text-slate-400" title={c.note || undefined}>
+                      {c.note || "—"}
+                    </td>
+                    {canEdit && (
+                      <td className="text-right">
+                        {canDeleteThis ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(c)}
+                            className="text-xs text-red-600 hover:underline hover:text-red-800"
+                          >
+                            Eliminar
+                          </button>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

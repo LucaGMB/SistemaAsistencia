@@ -161,7 +161,9 @@ export default function AlumnoPage() {
         <HourConceptsManager
           studentId={session.user.id}
           concepts={hourConcepts}
-          canEdit={false}
+          canEdit={true}
+          currentUserId={session.user.id}
+          currentUserRole={session.user.role}
           onChanged={load}
         />
 
@@ -169,7 +171,9 @@ export default function AlumnoPage() {
         <InternshipsManager
           studentId={session.user.id}
           internships={internships}
-          canEdit={false}
+          canEdit={true}
+          currentUserId={session.user.id}
+          currentUserRole={session.user.role}
           onChanged={load}
         />
 

@@ -17,6 +17,13 @@ export type InternshipItem = {
   weeklySchedule: string;
   active: boolean;
   note: string | null;
+  createdById?: string | null;
+  createdBy?: {
+    id: string;
+    nombre: string;
+    apellido: string;
+    role: string;
+  } | null;
   exceptions: {
     id: string;
     date: string;
@@ -30,6 +37,8 @@ type Props = {
   studentId: string;
   internships: InternshipItem[];
   canEdit: boolean;
+  currentUserId?: string;
+  currentUserRole?: string;
   onChanged: () => void;
 };
 
@@ -37,6 +46,8 @@ export default function InternshipsManager({
   studentId,
   internships,
   canEdit,
+  currentUserId,
+  currentUserRole,
   onChanged,
 }: Props) {
   const [showNewForm, setShowNewForm] = useState(false);
@@ -405,6 +416,15 @@ export default function InternshipsManager({
                       ) : (
                         <span className="badge bg-slate-100 text-slate-600">Finalizada</span>
                       )}
+                      {intern.createdBy?.role === "ALUMNO" ? (
+                        <span className="badge bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Alumno
+                        </span>
+                      ) : (
+                        <span className="badge bg-slate-100 text-slate-700 border border-slate-200">
+                          Docente
+                        </span>
+                      )}
                     </div>
                     {intern.roleOrTask && (
                       <p className="text-xs text-slate-600 font-medium mt-0.5">{intern.roleOrTask}</p>
@@ -415,7 +435,7 @@ export default function InternshipsManager({
                     </p>
                   </div>
 
-                  {canEdit && (
+                  {canEdit && (currentUserRole !== "ALUMNO" || !intern.createdById || intern.createdById === currentUserId) && (
                     <button
                       type="button"
                       onClick={() => handleDeleteInternship(intern)}

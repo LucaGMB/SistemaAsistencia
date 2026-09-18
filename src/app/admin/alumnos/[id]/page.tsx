@@ -165,6 +165,8 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
               studentId={student.id}
               concepts={hourConcepts}
               canEdit={true}
+              currentUserId={session.user.id}
+              currentUserRole={session.user.role}
               onChanged={load}
             />
 
@@ -173,6 +175,8 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
               studentId={student.id}
               internships={internships}
               canEdit={true}
+              currentUserId={session.user.id}
+              currentUserRole={session.user.role}
               onChanged={load}
             />
 

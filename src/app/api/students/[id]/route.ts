@@ -31,11 +31,19 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           select: { id: true, date: true, dayOfWeek: true, hours: true, source: true, note: true },
         },
         hourConcepts: {
+          include: {
+            createdBy: {
+              select: { id: true, nombre: true, apellido: true, role: true },
+            },
+          },
           orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         },
         internships: {
           include: {
             exceptions: { orderBy: { date: "desc" } },
+            createdBy: {
+              select: { id: true, nombre: true, apellido: true, role: true },
+            },
           },
           orderBy: { startDate: "desc" },
         },

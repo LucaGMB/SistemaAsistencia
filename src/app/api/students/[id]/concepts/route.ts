@@ -17,6 +17,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const concepts = await prisma.hourConcept.findMany({
     where: { studentId: params.id },
+    include: {
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 
@@ -24,8 +29,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  const { session, error } = await requireSession();
   if (error) return error;
+
+  const isStaff = session!.user.role === "PROFESOR" || session!.user.role === "ADMIN";
+  if (!isStaff && session!.user.id !== params.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+  }
 
   const student = await prisma.user.findUnique({
     where: { id: params.id },
@@ -76,6 +86,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       date,
       note,
       createdById: session!.user.id,
+    },
+    include: {
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
     },
   });
 
