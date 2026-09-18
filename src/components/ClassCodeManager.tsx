@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 
 export default function ClassCodeManager() {
   const [code, setCode] = useState<string | null>(null);
+  const [isClassDay, setIsClassDay] = useState(true);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -14,6 +16,8 @@ export default function ClassCodeManager() {
       const data = await res.json();
       if (res.ok) {
         setCode(data.code);
+        setIsClassDay(data.isClassDay ?? true);
+        setIsCancelled(data.isCancelled ?? false);
       }
     } catch {
       // Ignorar errores en lectura pasiva
@@ -36,6 +40,8 @@ export default function ClassCodeManager() {
         setError(data.error ?? "No se pudo generar el código.");
       } else {
         setCode(data.code);
+        setIsClassDay(true);
+        setIsCancelled(false);
       }
     } catch {
       setError("Error de conexión al generar el código.");
@@ -47,6 +53,8 @@ export default function ClassCodeManager() {
   if (loading) {
     return <p className="text-slate-500 text-sm">Cargando código de clase...</p>;
   }
+
+  const canGenerate = isClassDay && !isCancelled;
 
   return (
     <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 my-4">
@@ -64,13 +72,18 @@ export default function ClassCodeManager() {
                 {code}
               </span>
             </div>
+          ) : !isClassDay ? (
+            <span className="text-sm font-medium text-slate-500 italic">Hoy no es día de clase</span>
+          ) : isCancelled ? (
+            <span className="text-sm font-medium text-amber-700 italic">Clase anulada</span>
           ) : (
             <span className="text-sm font-medium text-slate-500 italic">No generado</span>
           )}
           <button
             onClick={generateCode}
-            disabled={generating}
-            className="btn-primary text-sm !py-2"
+            disabled={generating || !canGenerate}
+            title={!isClassDay ? "Solo se genera en días de clase" : isCancelled ? "La clase está anulada" : undefined}
+            className={`btn-primary text-sm !py-2 ${!canGenerate ? "!bg-slate-300 !cursor-not-allowed !text-slate-500" : ""}`}
           >
             {generating
               ? "Generando..."

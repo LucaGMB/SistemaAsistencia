@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
+import { getAttendanceStatus } from "@/lib/schedule";
 
 /**
  * Datos de un alumno concreto con su historial y total de horas.
@@ -38,10 +39,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 
   const { attendances, ...info } = student;
+  const status = getAttendanceStatus();
+  const currentOpenClassDate = status.state === "OPEN" ? status.date : null;
 
   return NextResponse.json({
     student: info,
     attendances: attendances.map((a) => ({ ...a, cancelled: cancelledDates.has(a.date) })),
     totalHours: sumCreditedHours(attendances, cancelledDates),
+    currentOpenClassDate,
   });
 }

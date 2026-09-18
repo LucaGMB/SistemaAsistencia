@@ -24,7 +24,9 @@ const ACTION_LABELS: Record<string, string> = {
   HOURS_EXPORTED: "Exportación de horas (CSV)",
   USER_CREATED: "Usuario creado",
   USER_UPDATED: "Usuario actualizado",
+  USER_DELETED: "Usuario eliminado (CLI)",
   PASSWORD_CHANGED_BY_USER: "Cambio de contraseña propia",
+  CLASS_CODE_GENERATED: "Código de clase generado",
 };
 
 export default function LogsTable() {

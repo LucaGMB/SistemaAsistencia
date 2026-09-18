@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
-import { isPastOrCurrentClassDate } from "@/lib/schedule";
+import { isPastOrCurrentClassDate, getAttendanceStatus } from "@/lib/schedule";
 import { logAudit } from "@/lib/audit";
 
 // Crea o corrige la asistencia de un alumno en una fecha de clase que ya sucedio.
 export async function POST(req: Request) {
-  const { session, error } = await requireSession(["ADMIN"]);
+  const { session, error } = await requireSession(["ADMIN", "PROFESOR"]);
   if (error) return error;
 
   const body = await req.json().catch(() => null);
@@ -76,12 +76,22 @@ export async function POST(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const { session, error } = await requireSession(["ADMIN"]);
+  const { session, error } = await requireSession(["ADMIN", "PROFESOR"]);
   if (error) return error;
 
   const body = await req.json().catch(() => null);
   const studentId = String(body?.studentId ?? "");
   const date = String(body?.date ?? "");
+
+  if (session!.user.role === "PROFESOR") {
+    const status = getAttendanceStatus();
+    if (status.state !== "OPEN" || status.date !== date) {
+      return NextResponse.json(
+        { error: "Los profesores solo pueden remover presentes durante la duración de la clase." },
+        { status: 400 }
+      );
+    }
+  }
 
   const existing = await prisma.attendance.findUnique({
     where: { studentId_date: { studentId, date } },
