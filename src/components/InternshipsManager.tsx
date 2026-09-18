@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ArrowPathIcon, XMarkIcon } from "@/components/Icons";
+import { formatDateDMY } from "@/lib/dateFormat";
 import {
   INTERNSHIP_EXCEPTION_REASONS,
   WEEKDAY_LABELS,
@@ -802,8 +803,8 @@ export default function InternshipsManager({
                       <p className="text-xs text-slate-600 font-medium mt-0.5">{intern.roleOrTask}</p>
                     )}
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Período: <strong>{intern.startDate}</strong> al{" "}
-                      <strong>{intern.endDate || "En curso (sin fin fijado)"}</strong>
+                      Período: <strong>{formatDateDMY(intern.startDate)}</strong> al{" "}
+                      <strong>{intern.endDate ? formatDateDMY(intern.endDate) : "En curso (sin fin fijado)"}</strong>
                     </p>
                   </div>
 
@@ -927,7 +928,7 @@ export default function InternshipsManager({
                               <option value="">Seleccionar día...</option>
                               {validDates.map((vd) => (
                                 <option key={vd.date} value={vd.date}>
-                                  {vd.dayName} {vd.date} ({vd.hours}hs)
+                                  {vd.dayName} {formatDateDMY(vd.date)} ({vd.hours}hs)
                                 </option>
                               ))}
                             </select>
@@ -997,7 +998,7 @@ export default function InternshipsManager({
                         <tbody className="divide-y divide-slate-100">
                           {intern.exceptions.map((ex) => (
                             <tr key={ex.id} className="text-slate-700">
-                              <td className="py-1 font-mono text-[11px]">{ex.date}</td>
+                              <td className="py-1 font-mono text-[11px]">{formatDateDMY(ex.date)}</td>
                               <td className="py-1">
                                 <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
                                   {ex.reason}

@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { nowInSchoolTZ } from "@/lib/schedule";
-import { getHolidaysBetween } from "@/lib/holidays";
+import { fetchArgentineHolidays, getHolidaysBetween } from "@/lib/holidays";
+import { formatDateDMY } from "@/lib/dateFormat";
 
 export async function POST(
   req: Request,
@@ -59,7 +60,7 @@ export async function POST(
         },
       });
       createdCount++;
-      added.push(`${h.date} (${h.name})`);
+      added.push(`${formatDateDMY(h.date)} (${h.name})`);
     }
   }
 

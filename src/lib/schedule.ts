@@ -136,34 +136,28 @@ export const CALENDAR_MIN_DATE = "2026-09-01";
 export const CALENDAR_MIN_MONDAY = "2026-08-31";
 
 /**
- * Valida que una fecha (YYYY-MM-DD) sea un dia de clase valido y que ya
- * haya sucedido (esta en el pasado, o es hoy y la ventana ya cerro/esta
- * abierta). Se usa para permitir al admin/profesor cargar/editar asistencias.
- * No permite fechas previas al 1 de septiembre de 2026, ni fechas futuras,
- * ni el "NOT_STARTED" de hoy.
+ * Valida que una fecha (YYYY-MM-DD) sea un día de clase válido dentro del período
+ * lectivo habilitado (a partir del 01-09-2026 y hasta el límite del calendario).
+ * Permite a profesores y administradores registrar asistencias tanto pasadas como
+ * adelantadas de días hábiles de clase (martes, jueves o viernes).
  */
 export function isPastOrCurrentClassDate(dateStr: string, now: Date = new Date()) {
   if (dateStr < CALENDAR_MIN_DATE) {
     return { ok: false as const, reason: "BEFORE_MIN_DATE" as const };
   }
 
-  const today = nowInSchoolTZ(now);
-  if (dateStr > today.dateStr) return { ok: false as const, reason: "FUTURE_DATE" as const };
+  const bounds = getCalendarBounds(now);
+  const maxDate = addDays(bounds.maxMonday, 6);
+  if (dateStr > maxDate) {
+    return { ok: false as const, reason: "AFTER_MAX_DATE" as const };
+  }
 
-  // Reconstruimos el dia de la semana a partir del string de fecha (evita líos de TZ
-  // parseando como mediodia UTC).
+  // Reconstruimos el día de la semana a partir del string de fecha
   const [y, m, d] = dateStr.split("-").map(Number);
   const asUTCNoon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
   const weekday = asUTCNoon.getUTCDay();
   const win = WEEKLY_SCHEDULE[weekday];
   if (!win) return { ok: false as const, reason: "NOT_CLASS_DAY" as const };
-
-  if (dateStr === today.dateStr) {
-    const startMin = toMinutes(win.start);
-    if (today.minutesOfDay < startMin) {
-      return { ok: false as const, reason: "FUTURE_DATE" as const };
-    }
-  }
 
   return { ok: true as const, dayOfWeek: win.dayOfWeek, maxHours: hoursForWindow(win) };
 }

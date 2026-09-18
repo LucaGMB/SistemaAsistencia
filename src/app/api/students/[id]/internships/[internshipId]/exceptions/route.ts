@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
+import { formatDateDMY } from "@/lib/dateFormat";
 import { calculateInternshipHours } from "@/lib/hours";
 
 export async function POST(
@@ -47,7 +48,7 @@ export async function POST(
   if (date < internship.startDate || (internship.endDate && date > internship.endDate)) {
     return NextResponse.json(
       {
-        error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate ?? "actualidad"}).`,
+        error: `La fecha ${formatDateDMY(date)} está fuera del período de la pasantía (${formatDateDMY(internship.startDate)} a ${internship.endDate ? formatDateDMY(internship.endDate) : "actualidad"}).`,
       },
       { status: 400 }
     );

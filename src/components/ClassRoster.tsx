@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import RefreshIndicator from "@/components/RefreshIndicator";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
+import { formatDateDMY } from "@/lib/dateFormat";
 
 type RosterEntry = {
   id: string;
@@ -45,7 +46,7 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
   const [error, setError] = useState<string | null>(null);
 
   const isProf = session?.user?.role === "PROFESOR";
-  const canRemove = !isProf || !!data?.isOpen;
+  const canRemove = !isProf || !!data?.isOpen || !!data?.isFuture;
 
   useEffect(() => {
     fetch("/api/classes/dates?limit=20")
@@ -89,8 +90,8 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
     setSaving(null);
   }
 
-  // Solo tiene sentido editar una clase que ya sucedió y que no esté anulada.
-  const editable = canEdit && !!data && !data.isFuture && !data.cancelled;
+  // Se puede editar cualquier clase que no esté anulada (incluyendo clases adelantadas).
+  const editable = canEdit && !!data && !data.cancelled;
 
   const visible = (data?.roster ?? []).filter((r) =>
     filter === "TODOS" ? true : filter === "PRESENTES" ? r.attended : !r.attended
@@ -100,7 +101,7 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
     <div>
       <p className="mb-3 text-sm text-slate-500">
         Elegí una clase para ver quiénes registraron asistencia y quiénes no.
-        {canEdit && " Podés acreditar o quitar las horas de cada alumno en esa clase."}
+        {canEdit && " Podés tomar lista, acreditar o corregir las horas de cada alumno (incluso en clases adelantadas)."}
       </p>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -112,9 +113,9 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
           >
-            {dates.map((d) => (
+            {dates.map((d: any) => (
               <option key={d.date} value={d.date}>
-                {d.dayOfWeek} {d.date}
+                {d.dayOfWeek} {formatDateDMY(d.date)}{d.isFuture ? " (Adelantada / Próxima)" : ""}
               </option>
             ))}
           </select>
@@ -141,16 +142,19 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
       ) : (
         <>
           <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="font-semibold text-primary">
-              {data.dayOfWeek} {data.date} · {data.start} a {data.end}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-primary">
+                {data.dayOfWeek} {formatDateDMY(data.date)} · {data.start} a {data.end}
+              </p>
+              {data.isFuture && (
+                <span className="badge bg-primary/10 text-primary border border-primary/20">
+                  Clase adelantada / Próxima
+                </span>
+              )}
+            </div>
             {data.cancelled ? (
               <p className="mt-1 text-sm font-medium text-amber-700">
                 Clase anulada{data.reason ? `: ${data.reason}` : ""} — no acredita horas.
-              </p>
-            ) : data.isFuture ? (
-              <p className="mt-1 text-sm text-slate-500">
-                Esta clase todavía no sucedió.
               </p>
             ) : (
               <p className="mt-1 text-sm text-slate-600">
@@ -218,7 +222,7 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
                         <button
                           onClick={() => toggleAttendance(r.id, r.attended)}
                           disabled={saving === r.id || (r.attended && !canRemove)}
-                          title={r.attended && !canRemove ? "Solo se pueden remover presentes durante la clase activa" : undefined}
+                          title={r.attended && !canRemove ? "Solo se pueden remover presentes durante la clase activa o en clases adelantadas" : undefined}
                           className={
                             r.attended
                               ? !canRemove

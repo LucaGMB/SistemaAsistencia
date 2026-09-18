@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { XMarkIcon } from "@/components/Icons";
+import { formatDateDMY } from "@/lib/dateFormat";
 import { HOUR_CONCEPT_CATEGORIES, HourConceptCategory } from "@/lib/hours";
 
 export type HourConceptItem = {
@@ -300,7 +301,7 @@ export default function HourConceptsManager({
                     </td>
                     <td className="font-medium text-slate-800">{c.title}</td>
                     <td className="text-slate-500">{c.institution || "—"}</td>
-                    <td className="text-slate-500">{c.date || "—"}</td>
+                    <td className="text-slate-500">{formatDateDMY(c.date)}</td>
                     <td className="font-bold text-accent">+{c.hours}hs</td>
                     <td>
                       {c.createdBy?.role === "ALUMNO" ? (

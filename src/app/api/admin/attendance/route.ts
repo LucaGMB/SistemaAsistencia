@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
-import { isPastOrCurrentClassDate, getAttendanceStatus } from "@/lib/schedule";
+import { isPastOrCurrentClassDate, getAttendanceStatus, nowInSchoolTZ } from "@/lib/schedule";
 import { logAudit } from "@/lib/audit";
 
-// Crea o corrige la asistencia de un alumno en una fecha de clase que ya sucedio.
+// Crea o corrige la asistencia de un alumno en una fecha de clase (pasada o adelantada).
 export async function POST(req: Request) {
   const { session, error } = await requireSession(["ADMIN", "PROFESOR"]);
   if (error) return error;
@@ -17,11 +17,11 @@ export async function POST(req: Request) {
   const validation = isPastOrCurrentClassDate(date);
   if (!validation.ok) {
     const messages: Record<string, string> = {
-      BEFORE_MIN_DATE: "No se pueden cargar asistencias de clases regulares previas al 1 de septiembre de 2026. Las horas anteriores se configuran como horas previas en la ficha del alumno.",
-      FUTURE_DATE: "No podés cargar asistencia de una clase que todavía no sucedió.",
+      BEFORE_MIN_DATE: "No se pueden cargar asistencias de clases regulares previas al 01-09-2026. Las horas anteriores se configuran como horas previas en la ficha del alumno.",
+      AFTER_MAX_DATE: "No podés cargar asistencia de una clase que supera el límite del calendario escolar habilitado.",
       NOT_CLASS_DAY: "Esa fecha no corresponde a un día de clase (martes, jueves o viernes).",
     };
-    return NextResponse.json({ error: messages[validation.reason] }, { status: 400 });
+    return NextResponse.json({ error: messages[validation.reason] ?? "Fecha de clase inválida." }, { status: 400 });
   }
 
   const student = await prisma.user.findUnique({ where: { id: studentId } });
@@ -85,10 +85,14 @@ export async function DELETE(req: Request) {
   const date = String(body?.date ?? "");
 
   if (session!.user.role === "PROFESOR") {
+    const today = nowInSchoolTZ();
     const status = getAttendanceStatus();
-    if (status.state !== "OPEN" || status.date !== date) {
+    const isOpenNow = status.state === "OPEN" && status.date === date;
+    const isFutureOrAdelantada =
+      date > today.dateStr || (date === today.dateStr && status.state === "NOT_STARTED");
+    if (!isOpenNow && !isFutureOrAdelantada) {
       return NextResponse.json(
-        { error: "Los profesores solo pueden remover presentes durante la duración de la clase." },
+        { error: "Los profesores solo pueden remover presentes en la clase activa o en clases adelantadas." },
         { status: 400 }
       );
     }

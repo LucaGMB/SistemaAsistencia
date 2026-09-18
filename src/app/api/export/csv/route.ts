@@ -5,11 +5,12 @@ import { classDayForDateStr } from "@/lib/schedule";
 import { getCancelledDates, calculateInternshipHours } from "@/lib/hours";
 import { buildCsv, csvHeaders } from "@/lib/csv";
 import { logAudit } from "@/lib/audit";
+import { formatDateDMY } from "@/lib/dateFormat";
 
-/** "2026-09-08" -> "2026-09-08 21:10" usando el horario de inicio de esa clase. */
+/** "2026-09-08" -> "08-09-2026 21:10" usando el horario de inicio de esa clase. */
 function fechaYHora(date: string): string {
   const classDay = classDayForDateStr(date);
-  return classDay ? `${date} ${classDay.start}` : date;
+  return classDay ? `${formatDateDMY(date)} ${classDay.start}` : formatDateDMY(date);
 }
 
 function slug(value: string): string {
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
       const studentName = `${s.apellido}, ${s.nombre}`;
       // 1. Horas profesor anterior
       if (s.previousTeacherHours > 0) {
-        rows.push([studentName, s.dni, "Horas previas (antes 1/9)", "Profesor anterior", s.previousTeacherHours]);
+        rows.push([studentName, s.dni, "Horas previas (antes 01-09-2026)", "Profesor anterior", s.previousTeacherHours]);
       }
       // 2. Clases presenciales
       for (const a of s.attendances) {
@@ -82,7 +83,7 @@ export async function GET(req: Request) {
       // 3. Conceptos individuales
       for (const c of s.hourConcepts) {
         const detail = `${c.title}${c.institution ? ` (${c.institution})` : ""}`;
-        rows.push([studentName, s.dni, `Concepto: ${c.category}`, `${detail}${c.date ? ` [${c.date}]` : ""}`, c.hours]);
+        rows.push([studentName, s.dni, `Concepto: ${c.category}`, `${detail}${c.date ? ` [${formatDateDMY(c.date)}]` : ""}`, c.hours]);
       }
       // 4. Pasantías
       for (const intern of s.internships) {
@@ -92,7 +93,7 @@ export async function GET(req: Request) {
             studentName,
             s.dni,
             "Pasantía externa",
-            `${intern.company} (${intern.startDate} al ${intern.endDate || "En curso"})`,
+            `${intern.company} (${formatDateDMY(intern.startDate)} al ${intern.endDate ? formatDateDMY(intern.endDate) : "En curso"})`,
             calc.creditedHours,
           ]);
         }
@@ -139,7 +140,7 @@ export async function GET(req: Request) {
 
   // 1. Horas profesor anterior
   if (student.previousTeacherHours > 0) {
-    rows.push(["Horas previas (antes 1/9)", "Profesor anterior", student.previousTeacherHours]);
+    rows.push(["Horas previas (antes 01-09-2026)", "Profesor anterior", student.previousTeacherHours]);
   }
 
   // 2. Clases presenciales
@@ -150,7 +151,7 @@ export async function GET(req: Request) {
   // 3. Conceptos individuales
   for (const c of student.hourConcepts) {
     const detail = `${c.title}${c.institution ? ` (${c.institution})` : ""}`;
-    rows.push([`Concepto: ${c.category}`, `${detail}${c.date ? ` [${c.date}]` : ""}`, c.hours]);
+    rows.push([`Concepto: ${c.category}`, `${detail}${c.date ? ` [${formatDateDMY(c.date)}]` : ""}`, c.hours]);
   }
   // 4. Pasantías
   for (const intern of student.internships) {
@@ -158,7 +159,7 @@ export async function GET(req: Request) {
     if (calc.creditedHours > 0) {
       rows.push([
         "Pasantía externa",
-        `${intern.company} (${intern.startDate} al ${intern.endDate || "En curso"})`,
+        `${intern.company} (${formatDateDMY(intern.startDate)} al ${intern.endDate ? formatDateDMY(intern.endDate) : "En curso"})`,
         calc.creditedHours,
       ]);
     }

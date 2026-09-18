@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ArrowPathIcon } from "@/components/Icons";
+import { formatDateDMY } from "@/lib/dateFormat";
 
 type CancelledClass = {
   id: string;
@@ -172,7 +173,7 @@ export default function CancelledClasses({ onChange }: { onChange?: () => void }
             <tbody>
               {cancelled.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.date}</td>
+                  <td>{formatDateDMY(c.date)}</td>
                   <td>{c.dayOfWeek}</td>
                   <td className="text-slate-500">{c.reason ?? "—"}</td>
                   <td>

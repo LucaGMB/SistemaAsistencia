@@ -66,7 +66,7 @@ export default function PreviousTeacherHoursCard({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <ClockIcon className="w-5 h-5 text-amber-600" />
-            <h3 className="text-base font-bold text-primary">Horas con Profesor Anterior (antes del 1/9)</h3>
+            <h3 className="text-base font-bold text-primary">Horas con Profesor Anterior (antes del 01-09-2026)</h3>
             {isLocked ? (
               <span className="badge inline-flex items-center gap-1 bg-slate-100 text-slate-700 border border-slate-200">
                 <LockClosedIcon className="w-3 h-3 text-slate-500" />
@@ -79,7 +79,7 @@ export default function PreviousTeacherHoursCard({
             )}
           </div>
           <p className="text-xs text-slate-500 max-w-xl">
-            Horas acreditadas del 1er cuatrimestre antes de la implementación del sistema el 1 de septiembre de 2026.
+            Horas acreditadas del 1er cuatrimestre antes de la implementación del sistema el 01-09-2026.
           </p>
         </div>
 
