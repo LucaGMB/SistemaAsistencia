@@ -11,8 +11,6 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const date = searchParams.get("date") || nowInSchoolTZ().dateStr;
 
-  const classDay = classDayForDateStr(date);
-  const cancelled = await prisma.cancelledClass.findUnique({ where: { date } });
   const classCode = await prisma.classCode.findUnique({
     where: { date },
   });
@@ -20,8 +18,6 @@ export async function GET(req: Request) {
   return NextResponse.json({
     date,
     code: classCode ? classCode.code : null,
-    isClassDay: !!classDay,
-    isCancelled: !!cancelled,
   });
 }
 
@@ -43,7 +39,7 @@ export async function POST(req: Request) {
   const cancelled = await prisma.cancelledClass.findUnique({ where: { date } });
   if (cancelled) {
     return NextResponse.json(
-      { error: "La clase está anulada. Reactivala primero si querés generar el código de asistencia." },
+      { error: "No se puede generar código para una clase anulada." },
       { status: 400 }
     );
   }
@@ -76,7 +72,5 @@ export async function POST(req: Request) {
   return NextResponse.json({
     date: classCode.date,
     code: classCode.code,
-    isClassDay: true,
-    isCancelled: false,
   });
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import RefreshIndicator from "@/components/RefreshIndicator";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
 
@@ -23,7 +22,6 @@ type Roster = {
   cancelled: boolean;
   reason: string | null;
   isFuture: boolean;
-  isOpen?: boolean;
   presentes: number;
   ausentes: number;
   total: number;
@@ -34,7 +32,6 @@ type Roster = {
 type ClassDate = { date: string; dayOfWeek: string };
 
 export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) {
-  const { data: session } = useSession();
   const [dates, setDates] = useState<ClassDate[]>([]);
   const [selected, setSelected] = useState("");
   const [data, setData] = useState<Roster | null>(null);
@@ -43,9 +40,6 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
   // DNI del alumno cuya fila se está guardando, para deshabilitar su botón.
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const isProf = session?.user?.role === "PROFESOR";
-  const canRemove = !isProf || !!data?.isOpen;
 
   useEffect(() => {
     fetch("/api/classes/dates?limit=20")
@@ -217,15 +211,8 @@ export default function ClassRoster({ canEdit = false }: { canEdit?: boolean }) 
                       <td>
                         <button
                           onClick={() => toggleAttendance(r.id, r.attended)}
-                          disabled={saving === r.id || (r.attended && !canRemove)}
-                          title={r.attended && !canRemove ? "Solo se pueden remover presentes durante la clase activa" : undefined}
-                          className={
-                            r.attended
-                              ? !canRemove
-                                ? "rounded-lg border border-slate-300 bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-400 cursor-not-allowed"
-                                : "btn-danger"
-                              : "btn-outline !px-3 !py-1 !text-sm"
-                          }
+                          disabled={saving === r.id}
+                          className={r.attended ? "btn-danger" : "btn-outline !px-3 !py-1 !text-sm"}
                         >
                           {saving === r.id
                             ? "Guardando..."

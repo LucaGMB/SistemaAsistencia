@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
-import { classDayForDateStr, nowInSchoolTZ, getAttendanceStatus } from "@/lib/schedule";
+import { classDayForDateStr, nowInSchoolTZ } from "@/lib/schedule";
 
 /**
  * Quiénes asistieron a la clase de una fecha y quiénes no.
@@ -51,8 +51,6 @@ export async function GET(req: Request) {
   });
 
   const presentes = roster.filter((r) => r.attended).length;
-  const status = getAttendanceStatus();
-  const isOpen = status.state === "OPEN" && status.date === date;
 
   return NextResponse.json({
     date,
@@ -62,7 +60,6 @@ export async function GET(req: Request) {
     cancelled: !!cancelled,
     reason: cancelled?.reason ?? null,
     isFuture: date > today.dateStr,
-    isOpen,
     presentes,
     ausentes: roster.length - presentes,
     total: roster.length,

@@ -26,14 +26,12 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [totalHours, setTotalHours] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [currentOpenClassDate, setCurrentOpenClassDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await fetch(`/api/students/${params.id}`).then((r) => r.json());
     setStudent(data.student ?? null);
     setAttendances(data.attendances ?? []);
     setTotalHours(data.totalHours ?? 0);
-    setCurrentOpenClassDate(data.currentOpenClassDate ?? null);
     setLoading(false);
   }, [params.id]);
 
@@ -42,46 +40,6 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
   }, [load]);
 
   const { lastUpdate, refreshing, refreshNow } = useAutoRefresh(load);
-
-  const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
-  const [newDate, setNewDate] = useState("");
-  const [newHours, setNewHours] = useState("");
-
-  async function addOrEditAttendance() {
-    setMessage(null);
-    const res = await fetch("/api/admin/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        studentId: params.id,
-        date: newDate,
-        hours: newHours === "" ? undefined : Number(newHours),
-      }),
-    });
-    const data = await res.json();
-    setMessage(res.ok ? { text: "Asistencia guardada.", ok: true } : { text: data.error, ok: false });
-    if (res.ok) {
-      setNewDate("");
-      setNewHours("");
-      load();
-    }
-  }
-
-  async function deleteAttendance(date: string) {
-    if (!confirm(`¿Eliminar la asistencia del ${date}?`)) return;
-    setMessage(null);
-    const res = await fetch("/api/admin/attendance", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId: params.id, date }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setMessage({ text: data.error ?? "No se pudo eliminar la asistencia.", ok: false });
-    } else {
-      load();
-    }
-  }
 
   if (!session) return null;
 
@@ -122,38 +80,6 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
               </div>
             </section>
 
-            {message && (
-              <p className={`text-sm font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>{message.text}</p>
-            )}
-
-            <section className="card">
-              <h3 className="mb-2 font-bold text-primary">Cargar / corregir asistencia de una clase pasada</h3>
-              <p className="mb-3 text-sm text-slate-500">
-                Solo se pueden cargar fechas de martes, jueves o viernes que ya sucedieron y que no
-                estén anuladas. Si dejás "Horas" vacío, se acredita el total del día (3hs).
-              </p>
-              <div className="flex flex-wrap items-end gap-3">
-                <div>
-                  <label className="label">Fecha</label>
-                  <input type="date" className="input" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
-                </div>
-                <div>
-                  <label className="label">Horas (opcional)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={3}
-                    className="input w-24"
-                    value={newHours}
-                    onChange={(e) => setNewHours(e.target.value)}
-                  />
-                </div>
-                <button className="btn-primary" onClick={addOrEditAttendance} disabled={!newDate}>
-                  Guardar
-                </button>
-              </div>
-            </section>
-
             <section className="card">
               <h3 className="mb-4 text-lg font-bold text-primary">Historial de asistencias</h3>
               {attendances.length === 0 ? (
@@ -162,7 +88,7 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                 <div className="overflow-x-auto">
                   <table className="table-base">
                     <thead>
-                      <tr><th>Fecha</th><th>Día</th><th>Horas</th><th>Origen</th><th></th></tr>
+                      <tr><th>Fecha</th><th>Día</th><th>Horas</th><th>Origen</th></tr>
                     </thead>
                     <tbody>
                       {attendances.map((a) => (
@@ -177,13 +103,6 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                             )}
                           </td>
                           <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
-                          <td>
-                            {a.date === currentOpenClassDate ? (
-                              <button className="btn-danger" onClick={() => deleteAttendance(a.date)}>
-                                Eliminar
-                              </button>
-                            ) : null}
-                          </td>
                         </tr>
                       ))}
                     </tbody>
