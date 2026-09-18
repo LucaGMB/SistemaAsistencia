@@ -51,11 +51,15 @@ export default function AlumnoPage() {
   // No dispara festejos: esos son solo para el momento en que él registra.
   useAutoRefresh(load);
 
-  async function handleRegister() {
+  async function handleRegister(code: string) {
     setRegistering(true);
     setMessage(null);
     const previousHours = totalHours;
-    const res = await fetch("/api/attendance", { method: "POST" });
+    const res = await fetch("/api/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
     const data = await res.json();
     setRegistering(false);
     if (!res.ok) {
@@ -182,9 +186,11 @@ function AttendanceCard({
 }: {
   status: AttendanceStatus;
   alreadyRegistered: boolean;
-  onRegister: () => void;
+  onRegister: (code: string) => void;
   registering: boolean;
 }) {
+  const [code, setCode] = useState("");
+
   if (status.state === "NO_CLASS_TODAY") {
     return <p className="text-slate-600">Hoy no hay clase de Prácticas Profesionalizantes.</p>;
   }
@@ -224,15 +230,32 @@ function AttendanceCard({
     );
   }
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onRegister(code);
+  };
+
   return (
     <div>
       <p className="mb-3 text-slate-600">
-        La clase de hoy ({status.dayOfWeek}, {status.start} a {status.end}) está en curso. Podés
-        registrar tu asistencia ahora (+{status.hours}hs).
+        La clase de hoy ({status.dayOfWeek}, {status.start} a {status.end}) está en curso. Ingresá el
+        código de 4 dígitos provisto por el profesor para registrar tu asistencia (+{status.hours}hs).
       </p>
-      <button className="btn-primary" onClick={onRegister} disabled={registering}>
-        {registering ? "Registrando..." : "Registrar asistencia"}
-      </button>
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          maxLength={4}
+          pattern="\d{4}"
+          placeholder="Ej: 1234"
+          className="input !w-32 text-center text-lg tracking-widest font-mono"
+          value={code}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          required
+        />
+        <button className="btn-primary" type="submit" disabled={registering || code.length !== 4}>
+          {registering ? "Registrando..." : "Registrar asistencia"}
+        </button>
+      </form>
     </div>
   );
 }
