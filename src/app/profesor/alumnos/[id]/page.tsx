@@ -26,14 +26,12 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [totalHours, setTotalHours] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [currentOpenClassDate, setCurrentOpenClassDate] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await fetch(`/api/students/${params.id}`).then((r) => r.json());
     setStudent(data.student ?? null);
     setAttendances(data.attendances ?? []);
     setTotalHours(data.totalHours ?? 0);
-    setCurrentOpenClassDate(data.currentOpenClassDate ?? null);
     setLoading(false);
   }, [params.id]);
 
@@ -178,11 +176,7 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                           </td>
                           <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
                           <td>
-                            {a.date === currentOpenClassDate ? (
-                              <button className="btn-danger" onClick={() => deleteAttendance(a.date)}>
-                                Eliminar
-                              </button>
-                            ) : null}
+                            <button className="btn-danger" onClick={() => deleteAttendance(a.date)}>Eliminar</button>
                           </td>
                         </tr>
                       ))}
