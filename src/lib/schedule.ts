@@ -132,13 +132,21 @@ export function getAttendanceStatus(now: Date = new Date()): AttendanceStatus {
   };
 }
 
+export const CALENDAR_MIN_DATE = "2026-09-01";
+export const CALENDAR_MIN_MONDAY = "2026-08-31";
+
 /**
  * Valida que una fecha (YYYY-MM-DD) sea un dia de clase valido y que ya
  * haya sucedido (esta en el pasado, o es hoy y la ventana ya cerro/esta
- * abierta). Se usa para permitir al admin cargar/editar asistencias.
- * No permite fechas futuras ni el "NOT_STARTED" de hoy.
+ * abierta). Se usa para permitir al admin/profesor cargar/editar asistencias.
+ * No permite fechas previas al 1 de septiembre de 2026, ni fechas futuras,
+ * ni el "NOT_STARTED" de hoy.
  */
 export function isPastOrCurrentClassDate(dateStr: string, now: Date = new Date()) {
+  if (dateStr < CALENDAR_MIN_DATE) {
+    return { ok: false as const, reason: "BEFORE_MIN_DATE" as const };
+  }
+
   const today = nowInSchoolTZ(now);
   if (dateStr > today.dateStr) return { ok: false as const, reason: "FUTURE_DATE" as const };
 
@@ -217,4 +225,20 @@ export function classesInWeek(mondayStr: string): CalendarClass[] {
     }
   }
   return classes;
+}
+
+/**
+ * Límites de navegación del calendario semanal:
+ * - Mínimo: Lunes de la semana del 1 de septiembre de 2026 (2026-08-31)
+ * - Máximo: 2 semanas hacia adelante desde la semana actual
+ */
+export function getCalendarBounds(now: Date = new Date()) {
+  const today = nowInSchoolTZ(now);
+  const currentMonday = mondayOfWeek(today.dateStr);
+  const maxMonday = addDays(currentMonday, 14); // 2 semanas posteriores
+  return {
+    minMonday: CALENDAR_MIN_MONDAY,
+    maxMonday,
+    currentMonday,
+  };
 }

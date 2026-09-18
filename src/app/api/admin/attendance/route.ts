@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const validation = isPastOrCurrentClassDate(date);
   if (!validation.ok) {
     const messages: Record<string, string> = {
+      BEFORE_MIN_DATE: "No se pueden cargar asistencias de clases regulares previas al 1 de septiembre de 2026. Las horas anteriores se configuran como horas previas en la ficha del alumno.",
       FUTURE_DATE: "No podés cargar asistencia de una clase que todavía no sucedió.",
       NOT_CLASS_DAY: "Esa fecha no corresponde a un día de clase (martes, jueves o viernes).",
     };
