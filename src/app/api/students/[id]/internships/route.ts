@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { calculateInternshipHours } from "@/lib/hours";
-import { normalizeDateInput } from "@/lib/dateFormat";
+import { normalizeDateInput, formatDateDMY } from "@/lib/dateFormat";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
@@ -156,7 +156,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     actorId: session!.user.id,
     action: "INTERNSHIP_CREATED",
     targetId: params.id,
-    details: `Pasantía ${company} (${startDate} a ${endDate}) para ${student.apellido}, ${student.nombre}`,
+    details: `Pasantía ${company} (${formatDateDMY(startDate)} a ${endDate ? formatDateDMY(endDate) : "actualidad"}) para ${student.apellido}, ${student.nombre}`,
   });
 
   return NextResponse.json(
