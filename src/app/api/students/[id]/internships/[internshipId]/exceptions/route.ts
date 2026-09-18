@@ -155,7 +155,7 @@ export async function DELETE(
     actorId: session!.user.id,
     action: "INTERNSHIP_EXCEPTION_DELETED",
     targetId: params.id,
-    details: `${exception.date} (${exception.reason}) - Pasantía ${exception.internship.company}`,
+    details: `${formatDateDMY(exception.date)} (${exception.reason}) - Pasantía ${exception.internship.company}`,
   });
 
   const updatedInternship = await prisma.internship.findUnique({
