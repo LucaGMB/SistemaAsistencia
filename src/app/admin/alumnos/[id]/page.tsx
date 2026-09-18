@@ -6,6 +6,11 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import ExportHoursButton from "@/components/ExportHoursButton";
 
+import HourBreakdownCard from "@/components/HourBreakdownCard";
+import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
+import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
+import type { HourBreakdown } from "@/lib/hours";
+
 type Attendance = {
   id: string;
   date: string;
@@ -19,11 +24,21 @@ type StudentInfo = {
   id: string; dni: string; nombre: string; apellido: string; active: boolean;
 };
 
+const DEFAULT_BREAKDOWN: HourBreakdown = {
+  classHours: 0,
+  priorHours: 0,
+  coursesHours: 0,
+  internshipHours: 0,
+  total: 0,
+};
+
 export default function AlumnoDetalleAdmin({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
   const [student, setStudent] = useState<StudentInfo | null>(null);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
-  const [totalHours, setTotalHours] = useState(0);
+  const [breakdown, setBreakdown] = useState<HourBreakdown>(DEFAULT_BREAKDOWN);
+  const [hourConcepts, setHourConcepts] = useState<HourConceptItem[]>([]);
+  const [internships, setInternships] = useState<InternshipItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -36,7 +51,17 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
     const data = await fetch(`/api/students/${params.id}`).then((r) => r.json());
     setStudent(data.student ?? null);
     setAttendances(data.attendances ?? []);
-    setTotalHours(data.totalHours ?? 0);
+    setBreakdown(
+      data.breakdown ?? {
+        classHours: 0,
+        priorHours: 0,
+        coursesHours: 0,
+        internshipHours: 0,
+        total: data.totalHours ?? 0,
+      }
+    );
+    setHourConcepts(data.hourConcepts ?? []);
+    setInternships(data.internships ?? []);
     setLoading(false);
   }, [params.id]);
 
@@ -101,6 +126,8 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
 
   if (!session) return null;
 
+  const creditedCount = attendances.filter((a) => !a.cancelled).length;
+
   return (
     <div className="min-h-screen bg-slate-50">
       <TopBar nombre={session.user.nombre} apellido={session.user.apellido} roleLabel="Administrador" />
@@ -118,9 +145,8 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
             <section className="card">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-primary">{student.apellido}, {student.nombre}</h2>
+                  <h2 className="text-xl font-bold text-primary">{student.apellido}, {student.nombre}</h2>
                   <p className="text-sm text-slate-500">DNI {student.dni}</p>
-                  <p className="mt-4 text-4xl font-extrabold text-accent">{totalHours}hs</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <ExportHoursButton label="Exportar horas (CSV)" studentId={student.id} />
@@ -130,6 +156,25 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
                 </div>
               </div>
             </section>
+
+            {/* Desglose por concepto */}
+            <HourBreakdownCard breakdown={breakdown} creditedCount={creditedCount} />
+
+            {/* Gestor de Conceptos individuales */}
+            <HourConceptsManager
+              studentId={student.id}
+              concepts={hourConcepts}
+              canEdit={true}
+              onChanged={load}
+            />
+
+            {/* Gestor de Pasantías con excepciones */}
+            <InternshipsManager
+              studentId={student.id}
+              internships={internships}
+              canEdit={true}
+              onChanged={load}
+            />
 
             {message && (
               <p className={`text-sm font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>{message.text}</p>
@@ -158,7 +203,13 @@ export default function AlumnoDetalleAdmin({ params }: { params: { id: string } 
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label className="label">Fecha</label>
-                  <input type="date" className="input" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+                  <input
+                    type="date"
+                    min="2026-09-01"
+                    className="input"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="label">Horas (opcional)</label>

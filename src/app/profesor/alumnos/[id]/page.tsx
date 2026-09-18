@@ -6,7 +6,11 @@ import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import ExportHoursButton from "@/components/ExportHoursButton";
 import RefreshIndicator from "@/components/RefreshIndicator";
+import HourBreakdownCard from "@/components/HourBreakdownCard";
+import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
+import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
+import type { HourBreakdown } from "@/lib/hours";
 
 type Attendance = {
   id: string;
@@ -17,14 +21,28 @@ type Attendance = {
   cancelled: boolean;
 };
 type StudentInfo = {
-  id: string; dni: string; nombre: string; apellido: string; active: boolean;
+  id: string;
+  dni: string;
+  nombre: string;
+  apellido: string;
+  active: boolean;
+};
+
+const DEFAULT_BREAKDOWN: HourBreakdown = {
+  classHours: 0,
+  priorHours: 0,
+  coursesHours: 0,
+  internshipHours: 0,
+  total: 0,
 };
 
 export default function AlumnoDetalleProfesor({ params }: { params: { id: string } }) {
   const { data: session } = useSession();
   const [student, setStudent] = useState<StudentInfo | null>(null);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
-  const [totalHours, setTotalHours] = useState(0);
+  const [breakdown, setBreakdown] = useState<HourBreakdown>(DEFAULT_BREAKDOWN);
+  const [hourConcepts, setHourConcepts] = useState<HourConceptItem[]>([]);
+  const [internships, setInternships] = useState<InternshipItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentOpenClassDate, setCurrentOpenClassDate] = useState<string | null>(null);
 
@@ -32,7 +50,17 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
     const data = await fetch(`/api/students/${params.id}`).then((r) => r.json());
     setStudent(data.student ?? null);
     setAttendances(data.attendances ?? []);
-    setTotalHours(data.totalHours ?? 0);
+    setBreakdown(
+      data.breakdown ?? {
+        classHours: 0,
+        priorHours: 0,
+        coursesHours: 0,
+        internshipHours: 0,
+        total: data.totalHours ?? 0,
+      }
+    );
+    setHourConcepts(data.hourConcepts ?? []);
+    setInternships(data.internships ?? []);
     setCurrentOpenClassDate(data.currentOpenClassDate ?? null);
     setLoading(false);
   }, [params.id]);
@@ -108,12 +136,10 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
             <section className="card">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-bold text-primary">{student.apellido}, {student.nombre}</h2>
+                  <h2 className="text-xl font-bold text-primary">
+                    {student.apellido}, {student.nombre}
+                  </h2>
                   <p className="text-sm text-slate-500">DNI {student.dni}</p>
-                  <p className="mt-4 text-4xl font-extrabold text-accent">{totalHours}hs</p>
-                  <p className="text-sm text-slate-500">
-                    {creditedCount} {creditedCount === 1 ? "asistencia acreditada" : "asistencias acreditadas"}
-                  </p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
                   <ExportHoursButton label="Exportar horas (CSV)" studentId={student.id} />
@@ -122,20 +148,47 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
               </div>
             </section>
 
+            {/* Desglose por concepto */}
+            <HourBreakdownCard breakdown={breakdown} creditedCount={creditedCount} />
+
+            {/* Gestor de Conceptos individuales (horas previas, cursos) */}
+            <HourConceptsManager
+              studentId={student.id}
+              concepts={hourConcepts}
+              canEdit={true}
+              onChanged={load}
+            />
+
+            {/* Gestor de Pasantías con excepciones */}
+            <InternshipsManager
+              studentId={student.id}
+              internships={internships}
+              canEdit={true}
+              onChanged={load}
+            />
+
             {message && (
-              <p className={`text-sm font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>{message.text}</p>
+              <p className={`text-sm font-medium ${message.ok ? "text-green-700" : "text-red-600"}`}>
+                {message.text}
+              </p>
             )}
 
             <section className="card">
               <h3 className="mb-2 font-bold text-primary">Cargar / corregir asistencia de una clase pasada</h3>
               <p className="mb-3 text-sm text-slate-500">
-                Solo se pueden cargar fechas de martes, jueves o viernes que ya sucedieron y que no
-                estén anuladas. Si dejás "Horas" vacío, se acredita el total del día (3hs).
+                Solo se pueden cargar fechas de martes, jueves o viernes que ya sucedieron a partir del 1
+                de septiembre de 2026 y que no estén anuladas. Si dejás "Horas" vacío, se acredita el total del día (3hs).
               </p>
               <div className="flex flex-wrap items-end gap-3">
                 <div>
                   <label className="label">Fecha</label>
-                  <input type="date" className="input" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+                  <input
+                    type="date"
+                    min="2026-09-01"
+                    className="input"
+                    value={newDate}
+                    onChange={(e) => setNewDate(e.target.value)}
+                  />
                 </div>
                 <div>
                   <label className="label">Horas (opcional)</label>
@@ -155,14 +208,20 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
             </section>
 
             <section className="card">
-              <h3 className="mb-4 text-lg font-bold text-primary">Historial de asistencias</h3>
+              <h3 className="mb-4 text-lg font-bold text-primary">Historial de asistencias regulares</h3>
               {attendances.length === 0 ? (
                 <p className="text-sm text-slate-500">Sin asistencias registradas.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="table-base">
                     <thead>
-                      <tr><th>Fecha</th><th>Día</th><th>Horas</th><th>Origen</th><th></th></tr>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Día</th>
+                        <th>Horas</th>
+                        <th>Origen</th>
+                        <th></th>
+                      </tr>
                     </thead>
                     <tbody>
                       {attendances.map((a) => (

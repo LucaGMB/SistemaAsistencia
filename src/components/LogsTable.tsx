@@ -27,6 +27,12 @@ const ACTION_LABELS: Record<string, string> = {
   USER_DELETED: "Usuario eliminado (CLI)",
   PASSWORD_CHANGED_BY_USER: "Cambio de contraseña propia",
   CLASS_CODE_GENERATED: "Código de clase generado",
+  HOUR_CONCEPT_CREATED: "Concepto de horas creado",
+  HOUR_CONCEPT_DELETED: "Concepto de horas eliminado",
+  INTERNSHIP_CREATED: "Pasantía registrada",
+  INTERNSHIP_DELETED: "Pasantía eliminada",
+  INTERNSHIP_EXCEPTION_CREATED: "Inasistencia de pasantía registrada",
+  INTERNSHIP_EXCEPTION_DELETED: "Inasistencia de pasantía eliminada",
 };
 
 export default function LogsTable() {

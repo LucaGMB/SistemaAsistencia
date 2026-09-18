@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { Role } from "@/lib/roles";
-import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
+import { getCancelledDates, calculateStudentBreakdown } from "@/lib/hours";
 
 export async function GET() {
   const { session, error } = await requireSession(["ADMIN", "PROFESOR"]);
@@ -26,18 +26,41 @@ export async function GET() {
       active: true,
       createdAt: true,
       attendances: { select: { date: true, hours: true } },
+      hourConcepts: { select: { category: true, hours: true } },
+      internships: {
+        select: {
+          startDate: true,
+          endDate: true,
+          weeklySchedule: true,
+          exceptions: { select: { date: true } },
+        },
+      },
     },
   });
 
   const cancelledDates = await getCancelledDates();
 
-  const withTotals = users.map((u) => ({
-    ...u,
-    totalHours: sumCreditedHours(u.attendances, cancelledDates),
-    // Solo se cuentan las asistencias que efectivamente acreditan horas.
-    totalAttendances: u.attendances.filter((a) => !cancelledDates.has(a.date)).length,
-    attendances: undefined,
-  }));
+  const withTotals = users.map((u) => {
+    const breakdown = calculateStudentBreakdown({
+      attendances: u.attendances,
+      cancelledDates,
+      concepts: u.hourConcepts,
+      internships: u.internships,
+    });
+    return {
+      id: u.id,
+      dni: u.dni,
+      nombre: u.nombre,
+      apellido: u.apellido,
+      role: u.role,
+      active: u.active,
+      createdAt: u.createdAt,
+      totalHours: breakdown.total,
+      breakdown,
+      // Solo se cuentan las asistencias que efectivamente acreditan horas.
+      totalAttendances: u.attendances.filter((a) => !cancelledDates.has(a.date)).length,
+    };
+  });
 
   return NextResponse.json({ users: withTotals });
 }

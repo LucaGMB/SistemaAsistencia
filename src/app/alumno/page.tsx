@@ -6,9 +6,13 @@ import TopBar from "@/components/TopBar";
 import ExportHoursButton from "@/components/ExportHoursButton";
 import WeekCalendar from "@/components/WeekCalendar";
 import Celebration from "@/components/Celebration";
+import HourBreakdownCard from "@/components/HourBreakdownCard";
+import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
+import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
 import { crossedMilestone, hoursToNextMilestone, milestonesReached } from "@/lib/milestones";
 import type { AttendanceStatus } from "@/lib/schedule";
+import type { HourBreakdown } from "@/lib/hours";
 
 type Attendance = {
   id: string;
@@ -19,11 +23,22 @@ type Attendance = {
   cancelled: boolean;
 };
 
+const DEFAULT_BREAKDOWN: HourBreakdown = {
+  classHours: 0,
+  priorHours: 0,
+  coursesHours: 0,
+  internshipHours: 0,
+  total: 0,
+};
+
 export default function AlumnoPage() {
   const { data: session } = useSession();
   const [status, setStatus] = useState<AttendanceStatus | null>(null);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
+  const [breakdown, setBreakdown] = useState<HourBreakdown>(DEFAULT_BREAKDOWN);
+  const [hourConcepts, setHourConcepts] = useState<HourConceptItem[]>([]);
+  const [internships, setInternships] = useState<InternshipItem[]>([]);
   const [totalHours, setTotalHours] = useState(0);
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -39,6 +54,17 @@ export default function AlumnoPage() {
     setAlreadyRegistered(statusRes.alreadyRegistered);
     setAttendances(attRes.attendances ?? []);
     setTotalHours(attRes.totalHours ?? 0);
+    setBreakdown(
+      attRes.breakdown ?? {
+        classHours: 0,
+        priorHours: 0,
+        coursesHours: 0,
+        internshipHours: 0,
+        total: attRes.totalHours ?? 0,
+      }
+    );
+    setHourConcepts(attRes.hourConcepts ?? []);
+    setInternships(attRes.internships ?? []);
     setLoading(false);
     return (attRes.totalHours ?? 0) as number;
   }, []);
@@ -107,16 +133,14 @@ export default function AlumnoPage() {
           {message && <p className="mt-3 text-sm font-medium text-primary">{message}</p>}
         </section>
 
+        {/* Desglose de Horas */}
+        <HourBreakdownCard breakdown={breakdown} creditedCount={creditedCount} />
+
         <section className="card">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="mb-1 text-lg font-bold text-primary">Total de horas acumuladas</h2>
-              <p className="text-4xl font-extrabold text-accent">{totalHours}hs</p>
-              <p className="mt-1 text-sm text-slate-500">
-                {creditedCount} {creditedCount === 1 ? "asistencia acreditada" : "asistencias acreditadas"}
-              </p>
               {/* Solo se habla de festejos: no se muestra la meta total. */}
-              <p className="mt-3 text-sm font-medium text-primary">
+              <p className="text-sm font-medium text-primary">
                 {milestonesReached(totalHours) > 0 && (
                   <span className="mr-2" aria-hidden="true">
                     {"🎉".repeat(Math.min(milestonesReached(totalHours), 8))}
@@ -132,6 +156,22 @@ export default function AlumnoPage() {
             <ExportHoursButton label="Exportar mis horas (CSV)" />
           </div>
         </section>
+
+        {/* Conceptos Individuales (horas previas, cursos) */}
+        <HourConceptsManager
+          studentId={session.user.id}
+          concepts={hourConcepts}
+          canEdit={false}
+          onChanged={load}
+        />
+
+        {/* Pasantías externas */}
+        <InternshipsManager
+          studentId={session.user.id}
+          internships={internships}
+          canEdit={false}
+          onChanged={load}
+        />
 
         <section className="card">
           <h2 className="mb-4 text-lg font-bold text-primary">Mi semana en Prácticas</h2>

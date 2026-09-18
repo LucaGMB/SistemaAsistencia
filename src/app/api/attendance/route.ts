@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { getAttendanceStatus } from "@/lib/schedule";
-import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
+import {
+  getCancelledDates,
+  calculateStudentBreakdown,
+  calculateInternshipHours,
+} from "@/lib/hours";
 import { logAudit } from "@/lib/audit";
 
 // El alumno registra su propia asistencia del dia. Solo funciona si la
@@ -100,16 +104,46 @@ export async function GET(req: Request) {
     studentId = queryStudentId;
   }
 
-  const rows = await prisma.attendance.findMany({
-    where: { studentId },
-    orderBy: { date: "desc" },
+  const [rows, cancelledDates, hourConcepts, internships] = await Promise.all([
+    prisma.attendance.findMany({
+      where: { studentId },
+      orderBy: { date: "desc" },
+    }),
+    getCancelledDates(),
+    prisma.hourConcept.findMany({
+      where: { studentId },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    }),
+    prisma.internship.findMany({
+      where: { studentId },
+      include: {
+        exceptions: { orderBy: { date: "desc" } },
+      },
+      orderBy: { startDate: "desc" },
+    }),
+  ]);
+
+  const breakdown = calculateStudentBreakdown({
+    attendances: rows,
+    cancelledDates,
+    concepts: hourConcepts,
+    internships,
   });
+
+  const enrichedInternships = internships.map((i) => ({
+    ...i,
+    calculation: calculateInternshipHours(i),
+  }));
 
   // Se marcan las que caen en una clase anulada: siguen listadas pero no
   // acreditan horas.
-  const cancelledDates = await getCancelledDates();
   const attendances = rows.map((a) => ({ ...a, cancelled: cancelledDates.has(a.date) }));
-  const totalHours = sumCreditedHours(rows, cancelledDates);
 
-  return NextResponse.json({ attendances, totalHours });
+  return NextResponse.json({
+    attendances,
+    totalHours: breakdown.total,
+    hourConcepts,
+    internships: enrichedInternships,
+    breakdown,
+  });
 }

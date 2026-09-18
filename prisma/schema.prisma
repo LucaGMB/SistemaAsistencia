@@ -32,6 +32,10 @@ model User {
   logsAsTarget        AuditLog[] @relation("TargetLogs")
   cancelledClasses    CancelledClass[]
   classCodes          ClassCode[]
+  hourConcepts        HourConcept[]
+  internships         Internship[]
+  hourConceptsCreated HourConcept[] @relation("HourConceptCreatedBy")
+  internshipsCreated  Internship[]  @relation("InternshipCreatedBy")
 }
 
 // Código de 4 dígitos generado por el profesor para habilitar el presente en el aula
@@ -108,3 +112,72 @@ model AuditLog {
   @@index([targetId])
   @@index([createdAt])
 }
+
+// Concepto individual de horas (horas previas al 1/9, cursos, capacitaciones, talleres)
+model HourConcept {
+  id          String   @id @default(cuid())
+  student     User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+
+  // Categoría del concepto: "PREVIA" | "CURSO" | "CAPACITACION" | "OTRO"
+  category    String   @default("OTRO")
+  title       String   // Nombre o concepto (ej. "Prácticas 1er Cuatrimestre", "Curso Docker")
+  institution String?  // Entidad u organismo certificador
+  hours       Int      // Cantidad de horas acreditadas
+  date        String?  // Fecha asociada en formato YYYY-MM-DD
+  note        String?
+
+  createdBy   User?    @relation("HourConceptCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([category])
+}
+
+// Pasantía externa con cronograma semanal por día
+model Internship {
+  id             String   @id @default(cuid())
+  student        User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId      String
+
+  company        String   // Empresa u organismo
+  roleOrTask     String?  // Tarea, proyecto o rol
+  startDate      String   // Fecha inicio en formato YYYY-MM-DD
+  endDate        String   // Fecha fin en formato YYYY-MM-DD
+
+  // Cronograma semanal en formato JSON string:
+  // {"1": 4, "3": 4} donde 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb
+  weeklySchedule String
+  active         Boolean  @default(true)
+  note           String?
+
+  exceptions     InternshipException[]
+
+  createdBy      User?    @relation("InternshipCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([studentId])
+}
+
+// Días en los que no se asistió a la pasantía (feriado, día de estudio, enfermedad, etc.)
+model InternshipException {
+  id           String     @id @default(cuid())
+  internship   Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+  internshipId String
+
+  date         String     // Fecha YYYY-MM-DD
+  reason       String     // "Feriado" | "Día de estudio" | "Enfermedad" | "Otro"
+  note         String?
+
+  createdAt    DateTime   @default(now())
+
+  @@unique([internshipId, date])
+  @@index([internshipId])
+}
+
