@@ -15,7 +15,6 @@ export type AuditAction =
   | "USER_UPDATED"
   | "USER_DEACTIVATED"
   | "USER_REACTIVATED"
-  | "USER_DELETED"
   | "PASSWORD_CHANGED_BY_USER";
 
 export async function logAudit(params: {
