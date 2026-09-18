@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatDateTimeDMY } from "@/lib/dateFormat";
 
 type LogRow = {
   id: string;
@@ -67,7 +68,7 @@ export default function LogsTable() {
         <tbody>
           {logs.map((log) => (
             <tr key={log.id}>
-              <td className="whitespace-nowrap">{new Date(log.createdAt).toLocaleString("es-AR")}</td>
+              <td className="whitespace-nowrap">{formatDateTimeDMY(log.createdAt)}</td>
               <td>{ACTION_LABELS[log.action] ?? log.action}</td>
               <td>{log.actor ? `${log.actor.apellido}, ${log.actor.nombre} (${log.actor.dni})` : "—"}</td>
               <td>{log.target ? `${log.target.apellido}, ${log.target.nombre} (${log.target.dni})` : "—"}</td>

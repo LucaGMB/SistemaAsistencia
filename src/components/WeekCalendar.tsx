@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
+import { formatDateDMY } from "@/lib/dateFormat";
 
 type CalendarDay = {
   date: string;
@@ -52,16 +53,6 @@ const STATE_STYLES: Record<CalendarDay["state"], { card: string; badge: string; 
   },
 };
 
-/** "2026-09-08" -> "8 de septiembre" */
-function formatDate(dateStr: string): string {
-  const [, m, d] = dateStr.split("-").map(Number);
-  const meses = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-  ];
-  return `${d} de ${meses[m - 1]}`;
-}
-
 export default function WeekCalendar({ studentId }: { studentId?: string }) {
   const [week, setWeek] = useState<WeekData | null>(null);
   const [reference, setReference] = useState<string | null>(null);
@@ -106,7 +97,7 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-semibold text-slate-700">
-            {week ? `${formatDate(week.monday)} al ${formatDate(week.sunday)}` : "—"}
+            {week ? `${formatDateDMY(week.monday)} al ${formatDateDMY(week.sunday)}` : "—"}
           </p>
           {week && (
             <p className="text-sm text-slate-500">
@@ -124,7 +115,7 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
                 : "border-primary/30 text-primary hover:bg-primary/5"
             }`}
             aria-label="Semana anterior"
-            title={week?.canPrev === false ? "Límite: Semana del 1 de septiembre de 2026" : undefined}
+            title={week?.canPrev === false ? "Límite: Semana del 01-09-2026" : undefined}
           >
             ← Anterior
           </button>
@@ -181,7 +172,7 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
                 </div>
 
                 <p className={`text-sm ${d.state === "CANCELADA" ? "text-slate-400" : "text-slate-500"}`}>
-                  {formatDate(d.date)}
+                  {formatDateDMY(d.date)}
                 </p>
                 <p className={`text-sm ${d.state === "CANCELADA" ? "text-slate-400 line-through" : "text-slate-600"}`}>
                   {d.start} a {d.end}

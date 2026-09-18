@@ -31,7 +31,7 @@ export default function HourBreakdownCard({ breakdown, creditedCount }: HourBrea
         </div>
 
         <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3.5">
-          <div className="text-xs font-semibold text-amber-700">Horas previas (antes 1/9)</div>
+          <div className="text-xs font-semibold text-amber-700">Horas previas (antes 01-09-2026)</div>
           <div className="mt-1 text-2xl font-bold text-amber-900">{breakdown.priorHours}hs</div>
           <div className="text-[11px] text-amber-700/80">Profesor anterior</div>
         </div>

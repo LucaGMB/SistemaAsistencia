@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { classDayForDateStr } from "@/lib/schedule";
 import { fetchArgentineHolidays } from "@/lib/holidays";
+import { formatDateDMY } from "@/lib/dateFormat";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
         },
       });
       createdCount++;
-      synced.push(`${h.date} (${h.name})`);
+      synced.push(`${formatDateDMY(h.date)} (${h.name})`);
     }
   }
 

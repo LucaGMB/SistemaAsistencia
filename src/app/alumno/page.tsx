@@ -17,6 +17,7 @@ import {
   AcademicCapIcon,
   CheckIcon,
 } from "@/components/Icons";
+import { formatDateDMY } from "@/lib/dateFormat";
 import type { AttendanceStatus } from "@/lib/schedule";
 import type { HourBreakdown } from "@/lib/hours";
 
@@ -270,7 +271,7 @@ export default function AlumnoPage() {
                     <tbody>
                       {attendances.map((a) => (
                         <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
-                          <td>{a.date}</td>
+                          <td>{formatDateDMY(a.date)}</td>
                           <td>{a.dayOfWeek}</td>
                           <td>
                             {a.cancelled ? (

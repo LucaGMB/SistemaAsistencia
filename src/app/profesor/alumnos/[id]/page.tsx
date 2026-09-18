@@ -17,6 +17,7 @@ import {
   CalendarIcon,
   AcademicCapIcon,
 } from "@/components/Icons";
+import { formatDateDMY } from "@/lib/dateFormat";
 import type { HourBreakdown } from "@/lib/hours";
 
 type Attendance = {
@@ -289,10 +290,9 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                 )}
 
                 <section className="card">
-                  <h3 className="mb-2 font-bold text-primary">Cargar / corregir asistencia de una clase pasada</h3>
+                  <h3 className="mb-2 font-bold text-primary">Cargar / corregir asistencia de una clase</h3>
                   <p className="mb-3 text-sm text-slate-500">
-                    Solo se pueden cargar clases reales (martes, jueves o viernes) a partir del 1
-                    de septiembre de 2026. Si dejás "Horas" vacío, se acredita el total del día (3hs).
+                    Podés registrar clases reales (martes, jueves o viernes) a partir del 01-09-2026, incluyendo clases adelantadas dentro del período lectivo. Si dejás "Horas" vacío, se acredita el total del día (3hs).
                   </p>
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="min-w-[220px]">
@@ -302,10 +302,10 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                         value={newDate}
                         onChange={(e) => setNewDate(e.target.value)}
                       >
-                        <option value="">Seleccionar clase pasada...</option>
-                        {classDates.map((cd) => (
+                        <option value="">Seleccionar clase (pasada o adelantada)...</option>
+                        {classDates.map((cd: any) => (
                           <option key={cd.date} value={cd.date}>
-                            {cd.dayOfWeek} {cd.date}
+                            {cd.dayOfWeek} {formatDateDMY(cd.date)}{cd.isFuture ? " (Adelantada)" : ""}
                           </option>
                         ))}
                       </select>
@@ -345,13 +345,11 @@ export default function AlumnoDetalleProfesor({ params }: { params: { id: string
                         </thead>
                         <tbody>
                           {attendances.map((a) => {
-                            const isPast = a.date < (currentOpenClassDate ?? "");
-                            const isTodayOpen = a.date === currentOpenClassDate;
-                            const canDelete = isTodayOpen || isPast;
+                            const canDelete = !a.cancelled;
 
                             return (
                               <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
-                                <td>{a.date}</td>
+                                <td>{formatDateDMY(a.date)}</td>
                                 <td>{a.dayOfWeek}</td>
                                 <td>
                                   {a.cancelled ? (
