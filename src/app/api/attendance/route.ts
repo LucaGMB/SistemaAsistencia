@@ -104,7 +104,11 @@ export async function GET(req: Request) {
     studentId = queryStudentId;
   }
 
-  const [rows, cancelledDates, hourConcepts, internships] = await Promise.all([
+  const [userRecord, rows, cancelledDates, hourConcepts, internships] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: studentId },
+      select: { previousTeacherHours: true, previousTeacherHoursLocked: true },
+    }),
     prisma.attendance.findMany({
       where: { studentId },
       orderBy: { date: "desc" },
@@ -131,9 +135,13 @@ export async function GET(req: Request) {
     }),
   ]);
 
+  const previousTeacherHours = userRecord?.previousTeacherHours ?? 0;
+  const previousTeacherHoursLocked = userRecord?.previousTeacherHoursLocked ?? false;
+
   const breakdown = calculateStudentBreakdown({
     attendances: rows,
     cancelledDates,
+    previousTeacherHours,
     concepts: hourConcepts,
     internships,
   });
@@ -153,5 +161,7 @@ export async function GET(req: Request) {
     hourConcepts,
     internships: enrichedInternships,
     breakdown,
+    previousTeacherHours,
+    previousTeacherHoursLocked,
   });
 }

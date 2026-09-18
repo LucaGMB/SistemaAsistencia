@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   // riesgo de bucle infinito si el cronograma quedara vacío.
   let cursor = today;
   for (let i = 0; i < 400 && dates.length < limit; i++) {
+    if (cursor < "2026-09-01") break;
     const classDay = classDayForDateStr(cursor);
     if (classDay) dates.push({ date: cursor, dayOfWeek: classDay.dayOfWeek });
     cursor = addDays(cursor, -1);

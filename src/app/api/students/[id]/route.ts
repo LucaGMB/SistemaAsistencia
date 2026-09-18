@@ -26,6 +26,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         apellido: true,
         role: true,
         active: true,
+        previousTeacherHours: true,
+        previousTeacherHoursLocked: true,
         attendances: {
           orderBy: { date: "desc" },
           select: { id: true, date: true, dayOfWeek: true, hours: true, source: true, note: true },
@@ -63,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const breakdown = calculateStudentBreakdown({
     attendances,
     cancelledDates,
+    previousTeacherHours: student.previousTeacherHours,
     concepts: hourConcepts,
     internships,
   });

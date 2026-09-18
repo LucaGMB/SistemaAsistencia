@@ -7,6 +7,7 @@ import ExportHoursButton from "@/components/ExportHoursButton";
 import WeekCalendar from "@/components/WeekCalendar";
 import Celebration from "@/components/Celebration";
 import HourBreakdownCard from "@/components/HourBreakdownCard";
+import PreviousTeacherHoursCard from "@/components/PreviousTeacherHoursCard";
 import HourConceptsManager, { HourConceptItem } from "@/components/HourConceptsManager";
 import InternshipsManager, { InternshipItem } from "@/components/InternshipsManager";
 import { useAutoRefresh } from "@/lib/useAutoRefresh";
@@ -40,6 +41,9 @@ export default function AlumnoPage() {
   const [hourConcepts, setHourConcepts] = useState<HourConceptItem[]>([]);
   const [internships, setInternships] = useState<InternshipItem[]>([]);
   const [totalHours, setTotalHours] = useState(0);
+  const [previousTeacherHours, setPreviousTeacherHours] = useState(0);
+  const [previousTeacherHoursLocked, setPreviousTeacherHoursLocked] = useState(false);
+  const [activeTab, setActiveTab] = useState<"pasantias" | "cursos" | "semana">("pasantias");
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,6 +58,8 @@ export default function AlumnoPage() {
     setAlreadyRegistered(statusRes.alreadyRegistered);
     setAttendances(attRes.attendances ?? []);
     setTotalHours(attRes.totalHours ?? 0);
+    setPreviousTeacherHours(attRes.previousTeacherHours ?? 0);
+    setPreviousTeacherHoursLocked(attRes.previousTeacherHoursLocked ?? false);
     setBreakdown(
       attRes.breakdown ?? {
         classHours: 0,
@@ -157,66 +163,143 @@ export default function AlumnoPage() {
           </div>
         </section>
 
-        {/* Conceptos Individuales (horas previas, cursos) */}
-        <HourConceptsManager
+        {/* Horas del profesor anterior (Carga única bloqueable) */}
+        <PreviousTeacherHoursCard
           studentId={session.user.id}
-          concepts={hourConcepts}
-          canEdit={true}
-          currentUserId={session.user.id}
-          currentUserRole={session.user.role}
+          previousHours={previousTeacherHours}
+          isLocked={previousTeacherHoursLocked}
+          canEditStaff={false}
+          isStudent={true}
           onChanged={load}
         />
 
-        {/* Pasantías externas */}
-        <InternshipsManager
-          studentId={session.user.id}
-          internships={internships}
-          canEdit={true}
-          currentUserId={session.user.id}
-          currentUserRole={session.user.role}
-          onChanged={load}
-        />
+        {/* Navegación Modular por Módulos */}
+        <div className="flex border-b border-slate-200 bg-white rounded-xl p-1.5 shadow-sm overflow-x-auto gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("pasantias")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "pasantias"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span>🏢 Pasantías</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "pasantias" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {breakdown.internshipHours}hs
+            </span>
+          </button>
 
-        <section className="card">
-          <h2 className="mb-4 text-lg font-bold text-primary">Mi semana en Prácticas</h2>
-          <WeekCalendar />
-        </section>
+          <button
+            type="button"
+            onClick={() => setActiveTab("cursos")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "cursos"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span>🎓 Cursos y Talleres</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "cursos" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {breakdown.coursesHours}hs
+            </span>
+          </button>
 
-        <section className="card">
-          <h2 className="mb-4 text-lg font-bold text-primary">Historial de asistencias</h2>
-          {attendances.length === 0 ? (
-            <p className="text-sm text-slate-500">Todavía no registraste ninguna asistencia.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table-base">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Día</th>
-                    <th>Horas</th>
-                    <th>Origen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendances.map((a) => (
-                    <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
-                      <td>{a.date}</td>
-                      <td>{a.dayOfWeek}</td>
-                      <td>
-                        {a.cancelled ? (
-                          <span className="badge bg-amber-100 text-amber-700">Clase anulada</span>
-                        ) : (
-                          `${a.hours}hs`
-                        )}
-                      </td>
-                      <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+          <button
+            type="button"
+            onClick={() => setActiveTab("semana")}
+            className={`flex-1 py-2 px-3 text-xs sm:text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+              activeTab === "semana"
+                ? "bg-primary text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <span>📅 Semana e Historial</span>
+            <span
+              className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                activeTab === "semana" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+              }`}
+            >
+              {creditedCount} presentes
+            </span>
+          </button>
+        </div>
+
+        {/* Contenido según Módulo Activo */}
+        {activeTab === "pasantias" && (
+          <InternshipsManager
+            studentId={session.user.id}
+            internships={internships}
+            canEdit={true}
+            currentUserId={session.user.id}
+            currentUserRole={session.user.role}
+            onChanged={load}
+          />
+        )}
+
+        {activeTab === "cursos" && (
+          <HourConceptsManager
+            studentId={session.user.id}
+            concepts={hourConcepts}
+            canEdit={true}
+            currentUserId={session.user.id}
+            currentUserRole={session.user.role}
+            onChanged={load}
+          />
+        )}
+
+        {activeTab === "semana" && (
+          <div className="space-y-6">
+            <section className="card">
+              <h2 className="mb-4 text-lg font-bold text-primary">Mi semana en Prácticas</h2>
+              <WeekCalendar />
+            </section>
+
+            <section className="card">
+              <h2 className="mb-4 text-lg font-bold text-primary">Historial de asistencias</h2>
+              {attendances.length === 0 ? (
+                <p className="text-sm text-slate-500">Todavía no registraste ninguna asistencia.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="table-base">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th>
+                        <th>Día</th>
+                        <th>Horas</th>
+                        <th>Origen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {attendances.map((a) => (
+                        <tr key={a.id} className={a.cancelled ? "text-slate-400" : undefined}>
+                          <td>{a.date}</td>
+                          <td>{a.dayOfWeek}</td>
+                          <td>
+                            {a.cancelled ? (
+                              <span className="badge bg-amber-100 text-amber-700">Clase anulada</span>
+                            ) : (
+                              `${a.hours}hs`
+                            )}
+                          </td>
+                          <td>{a.source === "ADMIN" ? "Carga manual" : "Autoregistrado"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
       </main>
     </div>
   );

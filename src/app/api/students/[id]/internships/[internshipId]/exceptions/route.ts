@@ -44,9 +44,11 @@ export async function POST(
     );
   }
 
-  if (date < internship.startDate || date > internship.endDate) {
+  if (date < internship.startDate || (internship.endDate && date > internship.endDate)) {
     return NextResponse.json(
-      { error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate}).` },
+      {
+        error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate ?? "actualidad"}).`,
+      },
       { status: 400 }
     );
   }

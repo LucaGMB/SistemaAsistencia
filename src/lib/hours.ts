@@ -19,7 +19,6 @@ export function sumCreditedHours(attendances: HourBearing[], cancelledDates: Set
 }
 
 export const HOUR_CONCEPT_CATEGORIES = [
-  { value: "PREVIA", label: "Horas Previas (Profesor anterior)" },
   { value: "CURSO", label: "Curso" },
   { value: "CAPACITACION", label: "Capacitación / Taller" },
   { value: "OTRO", label: "Otro Concepto" },
@@ -51,14 +50,13 @@ export type InternshipCalculation = {
   deductedHours: number;
   exceptionCount: number;
   daysElapsed: number;
+  isOpenEnded?: boolean;
 };
 
 /**
- * Calcula las horas acreditadas y planificadas de una pasantía.
- *
- * Itera desde startDate hasta endDate:
+ * Calcula las horas de una pasantía:
  * - Para cada día que coincide con el cronograma semanal (weeklySchedule JSON: ej {"1": 4, "3": 4}):
- *   - Suma a plannedHours.
+ *   - Suma a plannedHours (si tiene endDate fijado).
  *   - Si el día es <= upToDate (por defecto hoy en horario local escolar):
  *     - Si la fecha está registrada como excepción (feriado, estudio, etc.), se suma a deductedHours.
  *     - Si no, se acredita a creditedHours.
@@ -66,21 +64,23 @@ export type InternshipCalculation = {
 export function calculateInternshipHours(
   internship: {
     startDate: string;
-    endDate: string;
+    endDate?: string | null;
     weeklySchedule: string;
     exceptions?: { date: string }[];
   },
   upToDate?: string
 ): InternshipCalculation {
+  const isOpenEnded = !internship.endDate;
   const result: InternshipCalculation = {
     creditedHours: 0,
     plannedHours: 0,
     deductedHours: 0,
     exceptionCount: internship.exceptions?.length || 0,
     daysElapsed: 0,
+    isOpenEnded,
   };
 
-  if (!internship.startDate || !internship.endDate || internship.startDate > internship.endDate) {
+  if (!internship.startDate) {
     return result;
   }
 
@@ -93,10 +93,15 @@ export function calculateInternshipHours(
 
   const exceptionDates = new Set((internship.exceptions || []).map((e) => e.date));
   const effectiveUpToDate = upToDate || nowInSchoolTZ().dateStr;
+  const finalIterationDate = internship.endDate || effectiveUpToDate;
+
+  if (internship.startDate > finalIterationDate) {
+    return result;
+  }
 
   let current = internship.startDate;
   let guard = 0;
-  while (current <= internship.endDate && guard < 1000) {
+  while (current <= finalIterationDate && guard < 1000) {
     guard++;
     const [y, m, d] = current.split("-").map(Number);
     const asUTCNoon = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
@@ -104,7 +109,9 @@ export function calculateInternshipHours(
 
     const hoursForDay = Number(schedule[dayOfWeek]) || 0;
     if (hoursForDay > 0) {
-      result.plannedHours += hoursForDay;
+      if (!isOpenEnded) {
+        result.plannedHours += hoursForDay;
+      }
 
       if (current <= effectiveUpToDate) {
         result.daysElapsed++;
@@ -117,6 +124,10 @@ export function calculateInternshipHours(
     }
 
     current = addDays(current, 1);
+  }
+
+  if (isOpenEnded) {
+    result.plannedHours = result.creditedHours + result.deductedHours;
   }
 
   return result;
@@ -133,17 +144,18 @@ export type HourBreakdown = {
 /**
  * Calcula el desglose completo de horas de un alumno sumando:
  * - Horas de clases regulares (sin clases anuladas)
- * - Horas previas (concepto categoría 'PREVIA')
+ * - Horas del profesor anterior (previousTeacherHours o conceptos 'PREVIA')
  * - Cursos / capacitaciones / otros conceptos
  * - Horas devengadas de pasantías (descontando excepciones)
  */
 export function calculateStudentBreakdown(params: {
   attendances: HourBearing[];
   cancelledDates: Set<string>;
+  previousTeacherHours?: number;
   concepts?: { category: string; hours: number }[];
   internships?: {
     startDate: string;
-    endDate: string;
+    endDate?: string | null;
     weeklySchedule: string;
     exceptions?: { date: string }[];
   }[];
@@ -151,7 +163,7 @@ export function calculateStudentBreakdown(params: {
 }): HourBreakdown {
   const classHours = sumCreditedHours(params.attendances, params.cancelledDates);
 
-  let priorHours = 0;
+  let priorHours = params.previousTeacherHours ?? 0;
   let coursesHours = 0;
   for (const c of params.concepts || []) {
     if (c.category === "PREVIA") {

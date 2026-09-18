@@ -68,15 +68,105 @@ export async function PATCH(
     return NextResponse.json({ error: "Pasantía no encontrada." }, { status: 404 });
   }
 
+  if (!isStaff && internship.createdById && internship.createdById !== session!.user.id) {
+    return NextResponse.json(
+      { error: "No podés modificar una pasantía creada por el docente." },
+      { status: 403 }
+    );
+  }
+
   const body = await req.json().catch(() => null);
-  const active = typeof body?.active === "boolean" ? body.active : undefined;
+  const dataToUpdate: Record<string, any> = {};
+
+  if (typeof body?.company === "string" && body.company.trim()) {
+    dataToUpdate.company = body.company.trim();
+  }
+
+  if (body?.roleOrTask !== undefined) {
+    dataToUpdate.roleOrTask = body.roleOrTask ? String(body.roleOrTask).trim() : null;
+  }
+
+  if (typeof body?.startDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.startDate.trim())) {
+    dataToUpdate.startDate = body.startDate.trim();
+  }
+
+  if (body?.endDate !== undefined) {
+    if (body.endDate === null || body.endDate === "") {
+      dataToUpdate.endDate = null;
+    } else if (typeof body.endDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.endDate.trim())) {
+      dataToUpdate.endDate = body.endDate.trim();
+    } else {
+      return NextResponse.json({ error: "La fecha de fin debe tener formato YYYY-MM-DD o estar vacía." }, { status: 400 });
+    }
+  }
+
+  const effectiveStart = dataToUpdate.startDate || internship.startDate;
+  const effectiveEnd = dataToUpdate.endDate !== undefined ? dataToUpdate.endDate : internship.endDate;
+
+  if (effectiveEnd && effectiveStart > effectiveEnd) {
+    return NextResponse.json({ error: "La fecha de inicio no puede ser posterior a la fecha de fin." }, { status: 400 });
+  }
+
+  if (body?.weeklySchedule !== undefined) {
+    let scheduleObj: Record<string, number> = {};
+    if (typeof body.weeklySchedule === "string") {
+      try {
+        scheduleObj = JSON.parse(body.weeklySchedule);
+      } catch {
+        return NextResponse.json({ error: "El cronograma semanal no es válido." }, { status: 400 });
+      }
+    } else if (typeof body.weeklySchedule === "object" && body.weeklySchedule !== null) {
+      scheduleObj = body.weeklySchedule;
+    }
+
+    const hasWeekend = Object.keys(scheduleObj).some((day) => {
+      const dNum = Number(day);
+      return (dNum === 0 || dNum === 6) && Number(scheduleObj[day]) > 0;
+    });
+
+    if (hasWeekend) {
+      return NextResponse.json(
+        { error: "Solo se permite cargar horas en días de semana (lunes a viernes). Los sábados y domingos no están permitidos." },
+        { status: 400 }
+      );
+    }
+
+    const validDays = Object.entries(scheduleObj).filter(([day, h]) => {
+      const dNum = Number(day);
+      return Number.isInteger(dNum) && dNum >= 1 && dNum <= 5 && Number(h) > 0;
+    });
+
+    if (validDays.length === 0) {
+      return NextResponse.json(
+        { error: "Debes asignar horas a por lo menos un día de la semana (lunes a viernes)." },
+        { status: 400 }
+      );
+    }
+
+    const cleanedSchedule: Record<string, number> = {};
+    for (const [day, h] of validDays) {
+      cleanedSchedule[day] = Number(h);
+    }
+    dataToUpdate.weeklySchedule = JSON.stringify(cleanedSchedule);
+  }
+
+  if (typeof body?.active === "boolean") {
+    dataToUpdate.active = body.active;
+  }
+
+  if (body?.note !== undefined) {
+    dataToUpdate.note = body.note ? String(body.note).trim() : null;
+  }
 
   const updated = await prisma.internship.update({
     where: { id: params.internshipId },
-    data: {
-      ...(active !== undefined ? { active } : {}),
+    data: dataToUpdate,
+    include: {
+      exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
     },
-    include: { exceptions: true },
   });
 
   return NextResponse.json({

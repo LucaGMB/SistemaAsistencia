@@ -52,7 +52,7 @@ export default function HourConceptsManager({
   onChanged,
 }: Props) {
   const [showForm, setShowForm] = useState(false);
-  const [category, setCategory] = useState<HourConceptCategory>("PREVIA");
+  const [category, setCategory] = useState<HourConceptCategory>("CURSO");
   const [title, setTitle] = useState("");
   const [institution, setInstitution] = useState("");
   const [hours, setHours] = useState("");
@@ -132,9 +132,9 @@ export default function HourConceptsManager({
     <section className="card space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-lg font-bold text-primary">Conceptos Individuales de Horas</h3>
+          <h3 className="text-lg font-bold text-primary">Cursos y Capacitaciones Externas</h3>
           <p className="text-xs text-slate-500">
-            Horas previas al 1/9, cursos, capacitaciones externas o reconocimientos individuales.
+            Cursos, talleres, certificaciones y capacitaciones extracurriculares individuales.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -147,7 +147,7 @@ export default function HourConceptsManager({
               className="btn-primary text-xs !py-1.5 !px-3"
               onClick={() => setShowForm(true)}
             >
-              + Nuevo Concepto
+              + Nuevo Curso / Concepto
             </button>
           )}
         </div>
@@ -156,7 +156,7 @@ export default function HourConceptsManager({
       {canEdit && showForm && (
         <form onSubmit={handleAdd} className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-bold text-primary">Cargar concepto de horas</h4>
+            <h4 className="text-sm font-bold text-primary">Cargar curso o capacitación</h4>
             <button
               type="button"
               className="text-xs text-slate-500 hover:text-slate-800"
@@ -189,7 +189,7 @@ export default function HourConceptsManager({
               <input
                 type="text"
                 className="input text-sm py-1.5"
-                placeholder="Ej. Horas 1er Cuatrimestre, Curso React..."
+                placeholder="Ej. Curso React, Certificación AWS..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required

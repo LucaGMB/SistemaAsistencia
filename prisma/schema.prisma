@@ -24,6 +24,10 @@ model User {
 
   active              Boolean  @default(true)
 
+  // Horas acreditadas del profesor anterior (antes del 1/9). Carga única para el alumno.
+  previousTeacherHours       Int      @default(0)
+  previousTeacherHoursLocked Boolean  @default(false)
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -146,7 +150,7 @@ model Internship {
   company        String   // Empresa u organismo
   roleOrTask     String?  // Tarea, proyecto o rol
   startDate      String   // Fecha inicio en formato YYYY-MM-DD
-  endDate        String   // Fecha fin en formato YYYY-MM-DD
+  endDate        String?  // Fecha fin opcional en formato YYYY-MM-DD (null = en curso sin límite)
 
   // Cronograma semanal en formato JSON string:
   // {"1": 4, "3": 4} donde 0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb

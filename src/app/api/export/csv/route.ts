@@ -52,7 +52,11 @@ export async function GET(req: Request) {
         dni: true,
         nombre: true,
         apellido: true,
-        attendances: { orderBy: { date: "asc" }, select: { date: true, hours: true } },
+        previousTeacherHours: true,
+        attendances: {
+          orderBy: { date: "asc" },
+          select: { date: true, hours: true },
+        },
         hourConcepts: {
           orderBy: { date: "asc" },
           select: { category: true, title: true, institution: true, hours: true, date: true },
@@ -66,17 +70,21 @@ export async function GET(req: Request) {
     const rows: (string | number)[][] = [];
     for (const s of students) {
       const studentName = `${s.apellido}, ${s.nombre}`;
-      // 1. Clases presenciales
+      // 1. Horas profesor anterior
+      if (s.previousTeacherHours > 0) {
+        rows.push([studentName, s.dni, "Horas previas (antes 1/9)", "Profesor anterior", s.previousTeacherHours]);
+      }
+      // 2. Clases presenciales
       for (const a of s.attendances) {
         if (cancelledDates.has(a.date)) continue;
         rows.push([studentName, s.dni, "Clase presencial", fechaYHora(a.date), a.hours]);
       }
-      // 2. Conceptos individuales
+      // 3. Conceptos individuales
       for (const c of s.hourConcepts) {
         const detail = `${c.title}${c.institution ? ` (${c.institution})` : ""}`;
         rows.push([studentName, s.dni, `Concepto: ${c.category}`, `${detail}${c.date ? ` [${c.date}]` : ""}`, c.hours]);
       }
-      // 3. Pasantías
+      // 4. Pasantías
       for (const intern of s.internships) {
         const calc = calculateInternshipHours(intern);
         if (calc.creditedHours > 0) {
@@ -84,7 +92,7 @@ export async function GET(req: Request) {
             studentName,
             s.dni,
             "Pasantía externa",
-            `${intern.company} (${intern.startDate} al ${intern.endDate})`,
+            `${intern.company} (${intern.startDate} al ${intern.endDate || "En curso"})`,
             calc.creditedHours,
           ]);
         }
@@ -114,6 +122,7 @@ export async function GET(req: Request) {
       dni: true,
       nombre: true,
       apellido: true,
+      previousTeacherHours: true,
       attendances: { orderBy: { date: "asc" }, select: { date: true, hours: true } },
       hourConcepts: {
         orderBy: { date: "asc" },
@@ -127,23 +136,29 @@ export async function GET(req: Request) {
   if (!student) return NextResponse.json({ error: "Alumno no encontrado." }, { status: 404 });
 
   const rows: (string | number)[][] = [];
-  // 1. Clases presenciales
+
+  // 1. Horas profesor anterior
+  if (student.previousTeacherHours > 0) {
+    rows.push(["Horas previas (antes 1/9)", "Profesor anterior", student.previousTeacherHours]);
+  }
+
+  // 2. Clases presenciales
   for (const a of student.attendances) {
     if (cancelledDates.has(a.date)) continue;
     rows.push(["Clase presencial", fechaYHora(a.date), a.hours]);
   }
-  // 2. Conceptos individuales
+  // 3. Conceptos individuales
   for (const c of student.hourConcepts) {
     const detail = `${c.title}${c.institution ? ` (${c.institution})` : ""}`;
     rows.push([`Concepto: ${c.category}`, `${detail}${c.date ? ` [${c.date}]` : ""}`, c.hours]);
   }
-  // 3. Pasantías
+  // 4. Pasantías
   for (const intern of student.internships) {
     const calc = calculateInternshipHours(intern);
     if (calc.creditedHours > 0) {
       rows.push([
         "Pasantía externa",
-        `${intern.company} (${intern.startDate} al ${intern.endDate})`,
+        `${intern.company} (${intern.startDate} al ${intern.endDate || "En curso"})`,
         calc.creditedHours,
       ]);
     }
