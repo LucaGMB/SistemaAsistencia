@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
 import { getAttendanceStatus } from "@/lib/schedule";
-import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
+import {
+  getCancelledDates,
+  calculateStudentBreakdown,
+  calculateInternshipHours,
+} from "@/lib/hours";
 import { logAudit } from "@/lib/audit";
 
 // El alumno registra su propia asistencia del dia. Solo funciona si la
-// ventana de la clase de hoy esta abierta (ya comenzo y no termino).
-export async function POST() {
+// ventana de la clase de hoy esta abierta (ya comenzo y no termino) y
+// si se provee el codigo correcto de 4 digitos generado por el profesor.
+export async function POST(req: Request) {
   const { session, error } = await requireSession(["ALUMNO"]);
   if (error) return error;
 
@@ -15,6 +20,34 @@ export async function POST() {
   if (status.state !== "OPEN") {
     return NextResponse.json(
       { error: "El registro de asistencia no esta disponible en este momento." },
+      { status: 400 }
+    );
+  }
+
+  const body = await req.json().catch(() => null);
+  const code = String(body?.code ?? "").trim();
+
+  if (!code) {
+    return NextResponse.json(
+      { error: "Debes ingresar el código de 4 dígitos provisto por el profesor." },
+      { status: 400 }
+    );
+  }
+
+  const classCodeRecord = await prisma.classCode.findUnique({
+    where: { date: status.date },
+  });
+
+  if (!classCodeRecord) {
+    return NextResponse.json(
+      { error: "El profesor aún no ha generado el código de asistencia para la clase de hoy." },
+      { status: 400 }
+    );
+  }
+
+  if (classCodeRecord.code !== code) {
+    return NextResponse.json(
+      { error: "El código de 4 dígitos ingresado es incorrecto." },
       { status: 400 }
     );
   }
@@ -71,16 +104,46 @@ export async function GET(req: Request) {
     studentId = queryStudentId;
   }
 
-  const rows = await prisma.attendance.findMany({
-    where: { studentId },
-    orderBy: { date: "desc" },
+  const [rows, cancelledDates, hourConcepts, internships] = await Promise.all([
+    prisma.attendance.findMany({
+      where: { studentId },
+      orderBy: { date: "desc" },
+    }),
+    getCancelledDates(),
+    prisma.hourConcept.findMany({
+      where: { studentId },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    }),
+    prisma.internship.findMany({
+      where: { studentId },
+      include: {
+        exceptions: { orderBy: { date: "desc" } },
+      },
+      orderBy: { startDate: "desc" },
+    }),
+  ]);
+
+  const breakdown = calculateStudentBreakdown({
+    attendances: rows,
+    cancelledDates,
+    concepts: hourConcepts,
+    internships,
   });
+
+  const enrichedInternships = internships.map((i) => ({
+    ...i,
+    calculation: calculateInternshipHours(i),
+  }));
 
   // Se marcan las que caen en una clase anulada: siguen listadas pero no
   // acreditan horas.
-  const cancelledDates = await getCancelledDates();
   const attendances = rows.map((a) => ({ ...a, cancelled: cancelledDates.has(a.date) }));
-  const totalHours = sumCreditedHours(rows, cancelledDates);
 
-  return NextResponse.json({ attendances, totalHours });
+  return NextResponse.json({
+    attendances,
+    totalHours: breakdown.total,
+    hourConcepts,
+    internships: enrichedInternships,
+    breakdown,
+  });
 }

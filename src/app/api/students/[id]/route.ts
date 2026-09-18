@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/apiAuth";
-import { getCancelledDates, sumCreditedHours } from "@/lib/hours";
+import {
+  getCancelledDates,
+  calculateStudentBreakdown,
+  calculateInternshipHours,
+} from "@/lib/hours";
+import { getAttendanceStatus } from "@/lib/schedule";
 
 /**
- * Datos de un alumno concreto con su historial y total de horas.
- *
- * Existe para que las vistas de detalle no tengan que pedir el listado
- * completo (/api/admin/users, que trae los 26 alumnos con todas sus
- * asistencias) solo para mostrar un nombre.
+ * Datos de un alumno concreto con su historial, conceptos individuales,
+ * pasantías, desglose y total general de horas.
  */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { error } = await requireSession(["PROFESOR", "ADMIN"]);
@@ -28,6 +30,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           orderBy: { date: "desc" },
           select: { id: true, date: true, dayOfWeek: true, hours: true, source: true, note: true },
         },
+        hourConcepts: {
+          orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+        },
+        internships: {
+          include: {
+            exceptions: { orderBy: { date: "desc" } },
+          },
+          orderBy: { startDate: "desc" },
+        },
       },
     }),
     getCancelledDates(),
@@ -37,11 +48,30 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: "Alumno no encontrado." }, { status: 404 });
   }
 
-  const { attendances, ...info } = student;
+  const { attendances, hourConcepts, internships, ...info } = student;
+  const status = getAttendanceStatus();
+  const currentOpenClassDate = status.state === "OPEN" ? status.date : null;
+
+  const breakdown = calculateStudentBreakdown({
+    attendances,
+    cancelledDates,
+    concepts: hourConcepts,
+    internships,
+  });
+
+  const enrichedInternships = internships.map((i) => ({
+    ...i,
+    calculation: calculateInternshipHours(i),
+  }));
 
   return NextResponse.json({
     student: info,
     attendances: attendances.map((a) => ({ ...a, cancelled: cancelledDates.has(a.date) })),
-    totalHours: sumCreditedHours(attendances, cancelledDates),
+    hourConcepts,
+    internships: enrichedInternships,
+    breakdown,
+    totalHours: breakdown.total,
+    currentOpenClassDate,
   });
 }
+

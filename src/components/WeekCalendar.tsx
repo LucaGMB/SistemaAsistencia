@@ -19,6 +19,8 @@ type WeekData = {
   monday: string;
   sunday: string;
   isCurrentWeek: boolean;
+  canPrev?: boolean;
+  canNext?: boolean;
   days: CalendarDay[];
 };
 
@@ -88,6 +90,8 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
 
   function shiftWeek(days: number) {
     if (!week) return;
+    if (days < 0 && week.canPrev === false) return;
+    if (days > 0 && week.canNext === false) return;
     const [y, m, d] = week.monday.split("-").map(Number);
     const base = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
     base.setUTCDate(base.getUTCDate() + days);
@@ -113,8 +117,14 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
         <div className="flex gap-2">
           <button
             onClick={() => shiftWeek(-7)}
-            className="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+            disabled={week?.canPrev === false}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+              week?.canPrev === false
+                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "border-primary/30 text-primary hover:bg-primary/5"
+            }`}
             aria-label="Semana anterior"
+            title={week?.canPrev === false ? "Límite: Semana del 1 de septiembre de 2026" : undefined}
           >
             ← Anterior
           </button>
@@ -128,8 +138,14 @@ export default function WeekCalendar({ studentId }: { studentId?: string }) {
           )}
           <button
             onClick={() => shiftWeek(7)}
-            className="rounded-lg border border-primary/30 px-3 py-1.5 text-sm font-semibold text-primary transition hover:bg-primary/5"
+            disabled={week?.canNext === false}
+            className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+              week?.canNext === false
+                ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed"
+                : "border-primary/30 text-primary hover:bg-primary/5"
+            }`}
             aria-label="Semana siguiente"
+            title={week?.canNext === false ? "Límite: Máximo 2 semanas hacia adelante" : undefined}
           >
             Siguiente →
           </button>

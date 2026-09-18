@@ -120,10 +120,22 @@ npx prisma migrate dev
 npm run dev
 ```
 
-## Deploy con Dockploy
+## Consola de administración (CLI)
+
+Para realizar acciones administrativas exclusivas que no están permitidas desde la interfaz web (como eliminar definitivamente a un alumno), se provee una consola interactiva / ejecutable:
+
+```bash
+# Modo ejecutable directo:
+npm run cli delete <dni>
+
+# Modo interactivo:
+npm run cli
+```
+
+## Deploy con Dokploy
 
 1. Subí este repositorio a tu proveedor de git (GitHub/GitLab/etc).
-2. En Dockploy, creá una nueva aplicación de tipo "Docker Compose" (o
+2. En Dokploy, creá una nueva aplicación de tipo "Docker Compose" (o
    "Dockerfile") apuntando a este repo.
 3. Configurá las variables de entorno (ver `.env.example`):
    - `NEXTAUTH_SECRET`: generar con `openssl rand -base64 32`.

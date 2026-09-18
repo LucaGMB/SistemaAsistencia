@@ -7,6 +7,7 @@ import {
   mondayOfWeek,
   nowInSchoolTZ,
   toMinutesOfDay,
+  getCalendarBounds,
 } from "@/lib/schedule";
 
 export type CalendarDayState =
@@ -30,7 +31,18 @@ export async function GET(req: Request) {
   const today = nowInSchoolTZ();
 
   const reference = /^\d{4}-\d{2}-\d{2}$/.test(requested ?? "") ? requested! : today.dateStr;
-  const monday = mondayOfWeek(reference);
+  const bounds = getCalendarBounds();
+  let monday = mondayOfWeek(reference);
+
+  // Clampear la semana dentro del rango permitido
+  if (monday < bounds.minMonday) {
+    monday = bounds.minMonday;
+  } else if (monday > bounds.maxMonday) {
+    monday = bounds.maxMonday;
+  }
+
+  const canPrev = monday > bounds.minMonday;
+  const canNext = monday < bounds.maxMonday;
 
   const classes = classesInWeek(monday);
   const dates = classes.map((c) => c.date);
@@ -93,6 +105,8 @@ export async function GET(req: Request) {
     sunday: addDays(monday, 6),
     isCurrentWeek: monday === mondayOfWeek(today.dateStr),
     today: today.dateStr,
+    canPrev,
+    canNext,
     days,
   });
 }

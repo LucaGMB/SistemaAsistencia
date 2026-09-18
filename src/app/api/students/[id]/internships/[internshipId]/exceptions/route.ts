@@ -1,0 +1,156 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/apiAuth";
+import { logAudit } from "@/lib/audit";
+import { calculateInternshipHours } from "@/lib/hours";
+
+export async function POST(
+  req: Request,
+  { params }: { params: { id: string; internshipId: string } }
+) {
+  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  if (error) return error;
+
+  const internship = await prisma.internship.findUnique({
+    where: { id: params.internshipId },
+    include: { student: { select: { nombre: true, apellido: true } } },
+  });
+
+  if (!internship || internship.studentId !== params.id) {
+    return NextResponse.json({ error: "Pasantía no encontrada." }, { status: 404 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const date = String(body?.date ?? "").trim();
+  const reason = String(body?.reason ?? "").trim();
+  const note = body?.note ? String(body.note).trim() : null;
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return NextResponse.json(
+      { error: "La fecha debe tener formato YYYY-MM-DD." },
+      { status: 400 }
+    );
+  }
+
+  if (!reason) {
+    return NextResponse.json(
+      { error: "El motivo de la inasistencia es obligatorio (ej. Feriado, Día de estudio)." },
+      { status: 400 }
+    );
+  }
+
+  if (date < internship.startDate || date > internship.endDate) {
+    return NextResponse.json(
+      { error: `La fecha ${date} está fuera del período de la pasantía (${internship.startDate} a ${internship.endDate}).` },
+      { status: 400 }
+    );
+  }
+
+  // Verificar si ya existe una excepción para esa fecha en esta pasantía
+  const existing = await prisma.internshipException.findUnique({
+    where: {
+      internshipId_date: {
+        internshipId: params.internshipId,
+        date,
+      },
+    },
+  });
+
+  if (existing) {
+    return NextResponse.json(
+      { error: `Ya existe una excepción registrada para el día ${date}.` },
+      { status: 409 }
+    );
+  }
+
+  const exception = await prisma.internshipException.create({
+    data: {
+      internshipId: params.internshipId,
+      date,
+      reason,
+      note,
+    },
+  });
+
+  await logAudit({
+    actorId: session!.user.id,
+    action: "INTERNSHIP_EXCEPTION_CREATED",
+    targetId: params.id,
+    details: `${date} (${reason}) - Pasantía ${internship.company} de ${internship.student.apellido}, ${internship.student.nombre}`,
+  });
+
+  const updatedInternship = await prisma.internship.findUnique({
+    where: { id: params.internshipId },
+    include: { exceptions: { orderBy: { date: "desc" } } },
+  });
+
+  return NextResponse.json(
+    {
+      exception,
+      internship: updatedInternship
+        ? {
+            ...updatedInternship,
+            calculation: calculateInternshipHours(updatedInternship),
+          }
+        : null,
+    },
+    { status: 201 }
+  );
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: { id: string; internshipId: string } }
+) {
+  const { session, error } = await requireSession(["PROFESOR", "ADMIN"]);
+  if (error) return error;
+
+  const { searchParams } = new URL(req.url);
+  const exceptionId = searchParams.get("exceptionId");
+
+  if (!exceptionId) {
+    return NextResponse.json(
+      { error: "Falta el identificador de la excepción." },
+      { status: 400 }
+    );
+  }
+
+  const exception = await prisma.internshipException.findUnique({
+    where: { id: exceptionId },
+    include: {
+      internship: {
+        include: { student: { select: { nombre: true, apellido: true } } },
+      },
+    },
+  });
+
+  if (!exception || exception.internshipId !== params.internshipId || exception.internship.studentId !== params.id) {
+    return NextResponse.json({ error: "Excepción no encontrada." }, { status: 404 });
+  }
+
+  await prisma.internshipException.delete({
+    where: { id: exceptionId },
+  });
+
+  await logAudit({
+    actorId: session!.user.id,
+    action: "INTERNSHIP_EXCEPTION_DELETED",
+    targetId: params.id,
+    details: `${exception.date} (${exception.reason}) - Pasantía ${exception.internship.company}`,
+  });
+
+  const updatedInternship = await prisma.internship.findUnique({
+    where: { id: params.internshipId },
+    include: { exceptions: { orderBy: { date: "desc" } } },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    internship: updatedInternship
+      ? {
+          ...updatedInternship,
+          calculation: calculateInternshipHours(updatedInternship),
+        }
+      : null,
+  });
+}
