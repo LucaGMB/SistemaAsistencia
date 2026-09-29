@@ -4,6 +4,7 @@ import { requireSession } from "@/lib/apiAuth";
 import { logAudit } from "@/lib/audit";
 import { calculateInternshipHours } from "@/lib/hours";
 import { normalizeDateInput, formatDateDMY } from "@/lib/dateFormat";
+import { syncInternshipHolidays } from "@/lib/syncHolidays";
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const { session, error } = await requireSession();
@@ -159,11 +160,27 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     details: `Pasantía ${company} (${formatDateDMY(startDate)} a ${endDate ? formatDateDMY(endDate) : "actualidad"}) para ${student.apellido}, ${student.nombre}`,
   });
 
+  // Sincronizar feriados automáticamente al crear la pasantía
+  await syncInternshipHolidays(internship.id);
+
+  // Volver a obtener la pasantía con las excepciones recién generadas
+  const updatedInternship = await prisma.internship.findUnique({
+    where: { id: internship.id },
+    include: {
+      exceptions: { orderBy: { date: "desc" } },
+      createdBy: {
+        select: { id: true, nombre: true, apellido: true, role: true },
+      },
+    },
+  });
+
+  const finalInternship = updatedInternship ?? internship;
+
   return NextResponse.json(
     {
       internship: {
-        ...internship,
-        calculation: calculateInternshipHours(internship),
+        ...finalInternship,
+        calculation: calculateInternshipHours(finalInternship),
       },
     },
     { status: 201 }
