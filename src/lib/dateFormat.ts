@@ -15,42 +15,46 @@
 export function formatDateDMY(date: string | Date | null | undefined): string {
   if (!date) return "—";
 
-  if (typeof date === "string") {
-    const trimmed = date.trim();
-    if (!trimmed) return "—";
+  try {
+    if (typeof date === "string") {
+      const trimmed = date.trim();
+      if (!trimmed) return "—";
 
-    // Si ya está en DD-MM-AAAA
-    if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+      // Si ya está en DD-MM-AAAA
+      if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+        return trimmed;
+      }
+
+      // Formato estándar ISO YYYY-MM-DD (ej: "2026-09-08" o "2026-09-08T...")
+      const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+      if (match) {
+        const [, y, m, d] = match;
+        return `${d}-${m}-${y}`;
+      }
+
+      // Fallback: objeto Date
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        const d = String(parsed.getDate()).padStart(2, "0");
+        const m = String(parsed.getMonth() + 1).padStart(2, "0");
+        const y = parsed.getFullYear();
+        return `${d}-${m}-${y}`;
+      }
+
       return trimmed;
     }
 
-    // Formato estándar ISO YYYY-MM-DD (ej: "2026-09-08" o "2026-09-08T...")
-    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
-    if (match) {
-      const [, y, m, d] = match;
+    if (date instanceof Date && !isNaN(date.getTime())) {
+      const d = String(date.getDate()).padStart(2, "0");
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const y = date.getFullYear();
       return `${d}-${m}-${y}`;
     }
 
-    // Fallback: objeto Date
-    const parsed = new Date(trimmed);
-    if (!isNaN(parsed.getTime())) {
-      const d = String(parsed.getDate()).padStart(2, "0");
-      const m = String(parsed.getMonth() + 1).padStart(2, "0");
-      const y = parsed.getFullYear();
-      return `${d}-${m}-${y}`;
-    }
-
-    return trimmed;
+    return "—";
+  } catch {
+    return "—";
   }
-
-  if (date instanceof Date && !isNaN(date.getTime())) {
-    const d = String(date.getDate()).padStart(2, "0");
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const y = date.getFullYear();
-    return `${d}-${m}-${y}`;
-  }
-
-  return "—";
 }
 
 /**
