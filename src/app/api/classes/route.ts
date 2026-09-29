@@ -4,12 +4,20 @@ import { requireSession } from "@/lib/apiAuth";
 import { classDayForDateStr } from "@/lib/schedule";
 import { logAudit } from "@/lib/audit";
 import { formatDateDMY } from "@/lib/dateFormat";
+import { syncClassHolidays } from "@/lib/syncHolidays";
 
 // Listado de clases anuladas. Lo consultan todos los roles: el alumno lo
 // necesita para saber por qué no puede registrar asistencia.
 export async function GET() {
   const { error } = await requireSession();
   if (error) return error;
+
+  // Sincronizar feriados de clases automáticamente
+  try {
+    await syncClassHolidays();
+  } catch (err) {
+    console.error("[classes GET] Error auto-syncing class holidays:", err);
+  }
 
   const cancelled = await prisma.cancelledClass.findMany({
     orderBy: { date: "desc" },
