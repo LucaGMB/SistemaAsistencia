@@ -30,8 +30,8 @@ export default function PreviousTeacherHoursCard({
     setError(null);
 
     const parsed = parseInt(hoursInput, 10);
-    if (isNaN(parsed) || parsed < 0) {
-      setError("Ingresá un número válido mayor o igual a 0.");
+    if (isNaN(parsed) || parsed < 0 || parsed > 138) {
+      setError("Ingresá un número válido entre 0 y 138.");
       return;
     }
 
@@ -137,7 +137,7 @@ export default function PreviousTeacherHoursCard({
                 <input
                   type="number"
                   min="0"
-                  max="400"
+                  max="138"
                   required
                   className="input text-sm py-1.5 pr-8"
                   placeholder="Ej. 30"

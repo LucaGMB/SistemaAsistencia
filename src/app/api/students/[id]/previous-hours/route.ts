@@ -36,8 +36,8 @@ export async function PATCH(
   const body = await req.json().catch(() => null);
   const hours = parseInt(body?.hours, 10);
 
-  if (isNaN(hours) || hours < 0) {
-    return NextResponse.json({ error: "La cantidad de horas debe ser un número entero mayor o igual a 0." }, { status: 400 });
+  if (isNaN(hours) || hours < 0 || hours > 138) {
+    return NextResponse.json({ error: "La cantidad de horas debe ser un número entero entre 0 y 138." }, { status: 400 });
   }
 
   const updatedUser = await prisma.user.update({
